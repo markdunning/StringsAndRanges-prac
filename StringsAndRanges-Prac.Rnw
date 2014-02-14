@@ -6,8 +6,11 @@
 % library('knitr'); rm(list=ls()); knit('DESeq2.Rnw')
 
 \documentclass[12pt]{article}
+\usepackage{wasysym,marvosym}
 \newcommand{\usecase}{\textit{\textbf{Use Case: }}}
-
+\newcommand{\notebell}{\bell}
+\newcommand{\noteright}{\Pointinghand}
+\newcommand{\textinfo}{\Info}
 <<knitr, echo=FALSE, results="hide">>=
 library("knitr")
 opts_chunk$set(tidy=FALSE,dev="png",fig.show="hide",
@@ -26,6 +29,7 @@ BiocStyle::latex()
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
+
 
 
 
@@ -218,8 +222,8 @@ writeXStringSet(myseq, file="myseq.fa")
 @
 
 
-\subsection{ShortRead}
-We are now going to deal with real, rather than simulated data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on Biostrings for its core functionality. 
+\subsection{Fastq analysis with ShortRead}
+We are now going to deal with real, rather than simulated data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on \Biocpkg{Biostrings} for its core functionality. 
 
 The FASTQ format is now the industry-standard way that sequencers produce output. 
 
@@ -237,9 +241,7 @@ Each read is given a unique identifier that is repeated on the first and third l
 PQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
 \end{verbatim}
 
-Reading the fastqc file into R allows quality control steps to be performed and the production of the type of plots that are produced by the fastqc tool.
-
-{\tt http://www.bioinformatics.babraham.ac.uk/projects/fastqc/}. 
+Reading the fastqc file into R allows quality control steps to be performed and the generation of the type of plots that are produced by the fastqc tool \footnote{\tt http://www.bioinformatics.babraham.ac.uk/projects/fastqc/}. 
 
 
 
@@ -290,7 +292,6 @@ text(abc[4,],labels="T",col="blue")
 
 \usecase
 Calculate the GC content of each read using the \Rfunction{alphabetFrequency} function. Find any reads with over 90\% GC bases
-
 
 <<>>=
 
@@ -388,7 +389,7 @@ plotRanges(resize(query,4))
 @
 
 
-On the other hand, \textbf{Inter-range} methods operate on a whole collection of ranges. Examples include \Rfunction{reduce}, \Rfunction{gaps} and \Rfunction{coverage}.
+On the other hand, \textit{Inter-range} methods operate on a whole collection of ranges. Examples include \Rfunction{reduce}, \Rfunction{gaps} and \Rfunction{coverage}.
 
 <<>>=
 plotRanges(reduce(query))
@@ -423,10 +424,10 @@ plotRanges(subject,xlim=c(0,150))
 
 @
 
-\Rfunction{precede} and \Rfunction{follow} are two ways of comparing Ranges objects For each range in x, \Rfunction{precede} returns the index of the interval in \Robject{subject} that is directly preceded by the \Robject{query} range. Overlapping ranges are excluded. NA is returned when there are no qualifying ranges in subject.
+\Rfunction{precede} and \Rfunction{follow} are two ways of comparing Ranges objects For each range in x, \Rfunction{precede} returns the index of the interval in \Robject{subject} that is directly preceded by the \Robject{query} range. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
 
-The opposite of \Rfunction{precede}, \Rfunction{follow} returns the index of the range in \Robject{subject} that a \Robject{query} range in x directly follows. Overlapping ranges are excluded. NA is returned when there are no qualifying ranges in subject.
-The \Rfunction{nearest} function
+The opposite of \Rfunction{precede}, \Rfunction{follow} returns the index of the range in \Robject{subject} that a \Robject{query} range in x directly follows. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
+
 
 \usecase
 Use \Rfunction{precede}, \Rfunction{follow} and \Rfunction{nearest} on the \Robject{query} and \Robject{subject} objects that we have created.
@@ -441,7 +442,7 @@ nearest(query,subject)
 @
 
 
-The degree of overlap between \Robject{query} and \Robject{subject} ranges can be investigated in a number of ways.  The \Rfunction(findOverlaps) function is the simplest way of finding which intervals in one set overlap another. The returned object stored the indices of the query and subject ranges that overlap. The \Rfunction{countOverlaps} is a convenient way of counting the number of ranges in the query overlap with the subject. If we are interested in the actual ranges where an overlap occurs (or does not occur), we can use the \Rfunction{intersect} and \Rfunction{setdiff} functions.
+The degree of overlap between \Robject{query} and \Robject{subject} ranges can be investigated in a number of ways.  The \Rfunction{findOverlaps} function is the simplest way of finding which intervals in one set overlap another. The returned object stored the indices of the query and subject ranges that overlap. The \Rfunction{countOverlaps} is a convenient way of counting the number of ranges in the query overlap with the subject. If we are interested in the actual ranges where an overlap occurs (or does not occur), we can use the \Rfunction{intersect} and \Rfunction{setdiff} functions.
 
 
 \usecase
@@ -480,8 +481,10 @@ coverage(gr)
 coverage(gr2)
 @
 
-\subsection{Reading bam alignments}
-An obvious application of the \Rfunction{IRanges} and \Rfunction{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
+\textinfo In later practicals, we will see how can perform overlaps of genomic features using this same infrastructure. 
+
+\section{Reading bam alignments}
+An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
 
 An example bam file is provided with the \Rpackage{Genetics2013HTSCourse} package.
 
@@ -549,6 +552,8 @@ findOverlaps(HighCovGR,bam)
 countOverlaps(HighCovGR,bam)
 @
 
+
+\subsection{Reading a particular genomic region}
 
 If we were only really interested in a relatively small region of a chromosome, then another option would be to read the whole bam file, especially if the file can run to several gigabytes in size. As the bam file is indexed, we can easily jump to the location we are interested in. This is achieved by using the \Rfunction{ScanBamParam} function with the GRanges object for the region we want to read. See the help page on \Rfunction{ScanBamParam} for more details about how to customise how to read a bam file.
 
