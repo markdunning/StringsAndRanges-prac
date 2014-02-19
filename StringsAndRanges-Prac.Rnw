@@ -33,6 +33,7 @@ BiocStyle::latex()
 
 
 
+
 \maketitle
 
 
@@ -222,7 +223,7 @@ writeXStringSet(myseq, file="myseq.fa")
 @
 
 
-\subsection{Fastq analysis with ShortRead}
+\section{Fastq analysis with ShortRead}
 We are now going to deal with real, rather than simulated data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on \Biocpkg{Biostrings} for its core functionality. 
 
 The FASTQ format is now the industry-standard way that sequencers produce output. 
