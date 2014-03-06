@@ -34,6 +34,8 @@ BiocStyle::latex()
 
 
 
+
+
 \maketitle
 
 
@@ -43,7 +45,7 @@ BiocStyle::latex()
 
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
-Before you start you will need to load the GeneticsHTSCourse2013 package. This has some example data that you will need in the practicals and some convenient functions
+Before you start you will need to load the GeneticsHTSCourse package. This has some example data that you will need in the practicals and some convenient functions
 
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
@@ -51,7 +53,7 @@ options(digits=3, width=80, prompt=" ", continue=" ")
 
 
 <<>>=
-library(GeneticsHTSCourse2013)
+library(GeneticsHTSCourse)
 @
 
 % very important to use option [fragile] for frames containing code output!
@@ -67,7 +69,7 @@ Here we will define a function to create a random set of DNA sequences with conf
 \usecase
 Use the \Rfunction{randomDNAString} function to construct 500 random sequence of A, T, G, C, each sequence of length between 10 and 20. Print out the first five strings.
 <<>>=
-library(GeneticsHTSCourse2013)
+library(GeneticsHTSCourse)
 randomDNAString
 
 rand <- randomDNAString()
@@ -364,6 +366,7 @@ writeXStringSet(trimmed.seq, file="trimmed.fq", format="fastq",qualities=quals)
 Construct an \Rclass{IRanges} object with start positions between 50 and 150 and varying lengths between 1 and 25
 
 <<>>=
+library(IRanges)
 starts <- floor(runif(n=50,min=50,max=150))
 ends <- starts + floor(runif(n=50,min=1,max=25))
 query <- IRanges(start = starts, end=ends)
@@ -467,6 +470,7 @@ plotRanges(setdiff(query,subject),xlim=c(0,200))
 Construct a \Robject{GRanges} object from the query and subject data in the previous exercise, allocating each range to sequences \textbf{A}, \textbf{B} or \textbf{C}. Explore the relationship between the objects as in the previous exercises.
 
 <<>>=
+library(GenomicRanges)
 gr <- GRanges(seqnames=sample(LETTERS[1:3],length(query),replace=T), ranges=query)
 gr <- sort(gr)
 
@@ -485,7 +489,7 @@ coverage(gr2)
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
 
-An example bam file is provided with the \Rpackage{Genetics2013HTSCourse} package.
+An example bam file is provided with the \Rpackage{GeneticsHTSCourse} package.
 
 
 \usecase
@@ -493,7 +497,7 @@ Read the example bam file into R as a \Robject{GRanges} object
 
 
 <<>>=
-bam <- readGappedAlignments(file=NA19240.chr21Bam())
+bam <- readGAlignments(file=NA19240.chr21Bam())
 bam
 @
 
