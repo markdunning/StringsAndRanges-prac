@@ -15,7 +15,7 @@
 library("knitr")
 opts_chunk$set(tidy=FALSE,dev="png",fig.show="hide",
                fig.width=4,fig.height=4.5,
-               message=FALSE,eval=F)
+               message=FALSE,eval=FALSE)
 @ 
 
 <<style, eval=TRUE, echo=FALSE, results="asis">>=
@@ -29,6 +29,7 @@ BiocStyle::latex()
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
+
 
 
 
@@ -67,7 +68,7 @@ Before explaining the specialised string manipulation features available in Bioc
 Here we will define a function to create a random set of DNA sequences with configurable lengths that we will work with in the following exercises. Each string is a separate item in a vector, so the usual subset conventions apply.
 
 \usecase
-Use the \Rfunction{randomDNAString} function to construct 500 random sequence of A, T, G, C, each sequence of length between 10 and 20. Print out the first five strings.
+Use the \Rfunction{randomDNAString} function, defined in the GeneticsHTSCourse package, to construct 500 random sequence of A, T, G,, C. By default each sequence will be of length between 10 and 20 [How do you know this?] . Print out the first five strings.
 <<>>=
 library(GeneticsHTSCourse)
 randomDNAString
@@ -213,7 +214,7 @@ reverseComplement(myseq)
 translate(myseq)
 @
 
-After manipulating our set of sequences, we may wish to export them for analysis in some external tool. A common format for sequence representation is {\tt .fasta}.
+After manipulating our set of sequences, we may wish to export them for analysis in some external tool. A common format for sequence representation is \textit{fasta} which usually has the file extension {\tt .fa}.
 
 
 \usecase
@@ -226,7 +227,7 @@ writeXStringSet(myseq, file="myseq.fa")
 
 
 \section{Fastq analysis with ShortRead}
-We are now going to deal with real, rather than simulated data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on \Biocpkg{Biostrings} for its core functionality. 
+We are now going to deal with real, rather than simulated, data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on \Biocpkg{Biostrings} for its core functionality. 
 
 The FASTQ format is now the industry-standard way that sequencers produce output. 
 
@@ -244,7 +245,7 @@ Each read is given a unique identifier that is repeated on the first and third l
 PQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
 \end{verbatim}
 
-Reading the fastqc file into R allows quality control steps to be performed and the generation of the type of plots that are produced by the fastqc tool \footnote{\tt http://www.bioinformatics.babraham.ac.uk/projects/fastqc/}. 
+Reading the fastq file into R allows quality control steps to be performed and the generation of the type of plots that are produced by the fastqc tool \footnote{\tt http://www.bioinformatics.babraham.ac.uk/projects/fastqc/}. 
 
 
 
@@ -254,11 +255,17 @@ Remind yourself of the format of a fastq file by reading the first few lines of 
 
 <<>>=
 sampleFQ()
-readLines(sampleFQ(),n=10)
+myfile <- sampleFQ()
+
+readLines(myfile,n=10)
 library(ShortRead)
-fq <- readFastq(sampleFQ())
+fq <- readFastq(myfile)
 fq
 @
+
+\textbf{Note:}
+{\color{blue}{To read your own fastq file into ShortRead, simply change the value of the \Robject{myfile} variable to point to the fastq file that you want to read. If you have trouble typing the path to the file, try the \Rfunction{file.choose} function.}}
+
 
 The \Robject{fq} object is of type \Rclass{ShortReadQ} and particular aspects of the object can be accessed by the \Rfunction{sread}, \Rfunction{quality} and \Rfunction{width} functions.
 
@@ -568,7 +575,7 @@ Read a portion of the bam file corresponding to the high-coverage regions rather
 
 
 <<>>=
-bam.sub2 <- readGappedAlignments(file=NA19240.chr21Bam(),use.names=TRUE, 
+bam.sub2 <- readGAlignments(file=NA19240.chr21Bam(),use.names=TRUE, 
 param=ScanBamParam(which=HighCovGR))
 length(bam.sub)
 length(bam.sub2)
