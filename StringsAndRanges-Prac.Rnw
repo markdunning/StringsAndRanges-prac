@@ -47,6 +47,7 @@ BiocStyle::latex()
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
 
+
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
 @
@@ -136,7 +137,6 @@ Create a summary of the string length distributions. Select all strings with les
 
 
 <<>>=
-myseq[1:10]
 summary(width(myseq))
 hist(summary(width(myseq)))
 myseq[width(myseq)<10]
@@ -243,7 +243,9 @@ Reading the fastq file into R allows quality control steps to be performed and t
 
 
 \usecase
-Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided in the {\tt exampleData} folder. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
+
+Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided. The location of the file can be retrieved using the \Rfunction(sampleFQ()) function that is provided with the \Rpackage{GeneticsHTSCourse}. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
+>>>>>>> a195514d5c72540920e322825d1da185f55978e3
 
 
 <<>>=
@@ -255,6 +257,7 @@ library(ShortRead)
 fq <- readFastq(myfile)
 fq
 @
+\textinfo If you would like to read your own Fastq files, you will need to change \Rcode{sampleFQ()} for the name and location of your own file.\\
 
 \textbf{Note:}
 {\color{blue}{To read your own fastq file into ShortRead, simply change the value of the \Robject{myfile} variable to point to the fastq file that you want to read. If you have trouble typing the path to the file, try the \Rfunction{file.choose} function.}}
@@ -277,7 +280,7 @@ Hopefully you will recognise the format that the reads are stored in. By using t
 
 
 \usecase
-Obtain a matrix of the base-frequency at each cycle and plot how it changes along the read.
+Obtain a matrix of the base-frequency at each cycle and compare how it changes along the read by making separate lines for each base.
 
 
 <<>>=
@@ -291,7 +294,7 @@ text(abc[3,],labels="G",col="green")
 text(abc[4,],labels="T",col="blue")
 
 @
-
+\textinfo By using \Rcode{type='n'} we tell the \Rfunction{plot} function to create an empty plot with axes and labels, but no points. We add details to this empty plot using the \Rfunction{text} function.\\
 
 \usecase
 Calculate the GC content of each read using the \Rfunction{gcFunction} function in the {\tt scripts} folder. Find any reads with over 90\% GC bases
