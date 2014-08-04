@@ -61,6 +61,7 @@ Before explaining the specialised string manipulation features available in Bioc
 
 Here we will define a function to create a random set of DNA sequences with configurable lengths that we will work with in the following exercises. Each string is a separate item in a vector, so the usual subset conventions apply.
 
+
 \usecase
 Use the \Rfunction{randomDNAString} function, defined in the scripts folder, to construct 500 random sequence of A, T, G,, C. By default each sequence will be of length between 10 and 20 [How do you know this?] . Print out the first five strings.
 <<>>=
