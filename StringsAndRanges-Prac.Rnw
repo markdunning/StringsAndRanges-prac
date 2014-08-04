@@ -1,5 +1,5 @@
 %\VignetteIndexEntry{Strings and Ranges Practical}
-%\VignettePackage{GeneticsHTSCourse}
+%\VignettePackage{Course}
 %\VignetteEngine{knitr::knitr}
 
 % To compile this document
@@ -46,18 +46,11 @@ BiocStyle::latex()
 
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
-Before you start you will need to load the GeneticsHTSCourse package. This has some example data that you will need in the practicals and some convenient functions
 
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
 @
 
-
-<<>>=
-library(GeneticsHTSCourse)
-@
-
-% very important to use option [fragile] for frames containing code output!
 
 \section{Strings}
 
@@ -68,11 +61,11 @@ Before explaining the specialised string manipulation features available in Bioc
 Here we will define a function to create a random set of DNA sequences with configurable lengths that we will work with in the following exercises. Each string is a separate item in a vector, so the usual subset conventions apply.
 
 \usecase
-Use the \Rfunction{randomDNAString} function, defined in the GeneticsHTSCourse package, to construct 500 random sequence of A, T, G,, C. By default each sequence will be of length between 10 and 20 [How do you know this?] . Print out the first five strings.
+Use the \Rfunction{randomDNAString} function, defined in the scripts folder, to construct 500 random sequence of A, T, G,, C. By default each sequence will be of length between 10 and 20 [How do you know this?] . Print out the first five strings.
 <<>>=
-library(GeneticsHTSCourse)
-randomDNAString
 
+source("scripts/randomDNAString.R")
+randomDNAString
 rand <- randomDNAString()
 rand
 rand[1:5]
@@ -250,12 +243,12 @@ Reading the fastq file into R allows quality control steps to be performed and t
 
 
 \usecase
-Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided. The location of the file can be retrieved using the \Rfunction(sampleFQ()) function. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
+Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided in the {\tt exampleData} folder. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
 
 
 <<>>=
-sampleFQ()
-myfile <- sampleFQ()
+
+myfile <- "exampleData/sample.fq"
 
 readLines(myfile,n=10)
 library(ShortRead)
@@ -301,15 +294,12 @@ text(abc[4,],labels="T",col="blue")
 
 
 \usecase
-Calculate the GC content of each read using the \Rfunction{gcFunction} function. Find any reads with over 90\% GC bases
+Calculate the GC content of each read using the \Rfunction{gcFunction} function in the {\tt scripts} folder. Find any reads with over 90\% GC bases
 
 <<>>=
 
-gcFunction <- function(x){
-  
-  alf <- alphabetFrequency(x, as.prob=T)
-  rowSums(alf[,c("G","C")])
-}
+source("scripts/gcFunction.R")
+
 
 gc <- gcFunction(sread(fq))
 hist(gc)
@@ -384,6 +374,7 @@ query <- sort(query)
 
 A number of \textit{Intra-range} operations are implemented that act on each range independantly. You may find this function from UC Riverside HT-sequencing guide by Thomas Girke \footnote{http://manuals.bioinformatics.ucr.edu/home/ht-seq} useful in understanding the ranges objects.
 <<>>=
+source("scripts//plotRanges.R")
 plotRanges
 @
 
@@ -496,7 +487,7 @@ coverage(gr2)
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
 
-An example bam file is provided with the \Rpackage{GeneticsHTSCourse} package.
+An example bam file is provided in the {\tt exampleData} folder.
 
 
 \usecase
@@ -504,7 +495,8 @@ Read the example bam file into R as a \Robject{GRanges} object
 
 
 <<>>=
-bam <- readGAlignments(file=NA19240.chr21Bam())
+mybam <- "exampleData/NA19914.chr22.bam"
+bam <- readGAlignments(file=mybam)
 bam
 @
 
@@ -532,7 +524,7 @@ Create a coverage vector and identify regions with more than 1000 reads covering
 
 <<>>=
 cov <- coverage(bam)
-HighCov <- ranges(slice(cov, 1000))[["chr21"]]
+HighCov <- ranges(slice(cov, 1000))[["22"]]
 HighCov
 @
 
@@ -545,7 +537,7 @@ Restrict the alignments to just those in the high-coverage regions
 
 
 <<>>=
-HighCovGR <- GRanges("chr21", IRanges(start = start(HighCov), end=end(HighCov)))
+HighCovGR <- GRanges("22", IRanges(start = start(HighCov), end=end(HighCov)))
 bam.sub <- bam[bam %over% HighCovGR,]
 bam.sub
 length(bam.sub)
@@ -575,7 +567,7 @@ Read a portion of the bam file corresponding to the high-coverage regions rather
 
 
 <<>>=
-bam.sub2 <- readGAlignments(file=NA19240.chr21Bam(),use.names=TRUE, 
+bam.sub2 <- readGAlignments(file=mybam,use.names=TRUE, 
 param=ScanBamParam(which=HighCovGR))
 length(bam.sub)
 length(bam.sub2)
