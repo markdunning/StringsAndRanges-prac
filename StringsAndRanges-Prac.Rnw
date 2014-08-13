@@ -25,7 +25,7 @@ BiocStyle::latex()
 
 \title{Introduction to Strings and Ranges in Bioconductor}
 
-\author{Mark Dunning}
+\author{Mark Dunning \email{mark.dunning@cruk.cam.ac.uk}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -245,8 +245,8 @@ Reading the fastq file into R allows quality control steps to be performed and t
 
 \usecase
 
-Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided. The location of the file can be retrieved using the \Rfunction(sampleFQ()) function that is provided with the \Rpackage{GeneticsHTSCourse}. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
->>>>>>> a195514d5c72540920e322825d1da185f55978e3
+Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided in the {\tt exampleData} folder. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
+
 
 
 <<>>=
@@ -504,7 +504,7 @@ bam <- readGAlignments(file=mybam)
 bam
 @
 
-The essential information from the bam file has been imported. Finer grain control over what data are read can be achieved by using the {\tt param} argument. The object returned by \Rfunction{readGappedAlignments} acts like a data frame, with columns that can be assessed by a number of convenience functions \Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}
+The essential information from the bam file has been imported. Finer grain control over what data are read can be achieved by using the {\tt param} argument. The object returned by \Rfunction{readGAlignments} acts like a data frame, with columns that can be assessed by a number of convenience functions \Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}
 
 \usecase
 Use accessor functions to explore the \Robject{bam} object
