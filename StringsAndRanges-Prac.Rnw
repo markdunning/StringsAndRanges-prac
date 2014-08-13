@@ -258,10 +258,8 @@ library(ShortRead)
 fq <- readFastq(myfile)
 fq
 @
-\textinfo If you would like to read your own Fastq files, you will need to change \Rcode{sampleFQ()} for the name and location of your own file.\\
+\textinfo To read your own fastq file into ShortRead, simply change the value of the \Robject{myfile} variable to point to the fastq file that you want to read. If you have trouble typing the path to the file, try the \Rfunction{file.choose} function.\\
 
-\textbf{Note:}
-{\color{blue}{To read your own fastq file into ShortRead, simply change the value of the \Robject{myfile} variable to point to the fastq file that you want to read. If you have trouble typing the path to the file, try the \Rfunction{file.choose} function.}}
 
 
 The \Robject{fq} object is of type \Rclass{ShortReadQ} and particular aspects of the object can be accessed by the \Rfunction{sread}, \Rfunction{quality} and \Rfunction{width} functions.
