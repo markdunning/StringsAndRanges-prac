@@ -26,11 +26,10 @@ BiocStyle::latex()
 \title{Introduction to Strings and Ranges in Bioconductor}
 
 \author{Mark Dunning \email{mark.dunning@cruk.cam.ac.uk}}
+\date{Last modified: \today}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
-
-
 
 
 
@@ -46,7 +45,7 @@ BiocStyle::latex()
 
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
-
+\textbf{In order for the example code to run, you must be in the {\tt Practicals} directory.}
 
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
@@ -139,7 +138,7 @@ Create a summary of the string length distributions. Select all strings with les
 
 <<>>=
 summary(width(myseq))
-hist(summary(width(myseq)))
+hist(width(myseq))
 myseq[width(myseq)<10]
 as.character(myseq[width(myseq)<10])
 @
@@ -311,6 +310,7 @@ sread(fq)[gc > 0.9]
 @
 
 We can also seek to find how many times each sequence occur in the file. Over-represented sequences could be adaptor sequences, or other artefacts.
+
 \usecase
 Find the most-commonly ocurring sequences in the file
 
@@ -333,6 +333,7 @@ Convert the quality scores into a more manageable format and visualise the quali
 qual <- as(quality(fq), "matrix")
 dim(qual)
 plot(colMeans(qual), type="b")
+abline(h=26)
 @
 
 For illustration purposes, we will choose a minimum cut-off of 26. 
@@ -493,7 +494,7 @@ An example bam file is provided in the {\tt exampleData} folder.
 
 
 \usecase
-Read the example bam file into R as a \Robject{GRanges} object
+Read the example bam file into R as a \Robject{GRanges} object. How many reads are in the file?
 
 
 <<>>=
@@ -505,7 +506,7 @@ bam
 The essential information from the bam file has been imported. Finer grain control over what data are read can be achieved by using the {\tt param} argument. The object returned by \Rfunction{readGAlignments} acts like a data frame, with columns that can be assessed by a number of convenience functions \Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}
 
 \usecase
-Use accessor functions to explore the \Robject{bam} object
+Use accessor ({\Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}) functions to explore the \Robject{bam} object.
 
 
 <<>>=
@@ -535,7 +536,7 @@ HighCov
 An efficient way of creating a subset of reads based on genomic location is to use the overlapping functionality that we saw previously.
 
 \usecase
-Restrict the alignments to just those in the high-coverage regions
+Restrict the alignments to just those in the high-coverage (say > 1000 reads) regions
 
 
 <<>>=
@@ -548,8 +549,7 @@ length(bam.sub)
 
 
 \usecase
-Use \Rfunction{findOverlaps} and \Rfunction{countOverlaps} to find out how many reads align to these high-coverage regions
-
+Use \Rfunction{findOverlaps} and \Rfunction{countOverlaps} to find out how many reads align to these high-coverage regions.
 
 <<>>=
 findOverlaps(HighCovGR,bam)
@@ -565,7 +565,7 @@ If we were only really interested in a relatively small region of a chromosome, 
 
 
 \usecase
-Read a portion of the bam file corresponding to the high-coverage regions rather the whole file. Verify that the same reads as the overlap in the previous exercise are returned 
+Read a portion of the bam file corresponding to the high-coverage regions rather the whole file. Verify that the same reads as the previous exercise are returned.
 
 
 <<>>=
