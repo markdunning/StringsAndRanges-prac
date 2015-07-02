@@ -55,7 +55,12 @@ options(digits=3, width=80, prompt=" ", continue=" ")
 
 \section{Accessing Genome Sequence}
 
-\usecase
+\usecase See what genomes are currently available through Bioconductor
+
+<<>>=
+library(BSgenome)
+available.genomes()
+@
 
 Load the package that contains a representaion of the Human Genome version hg19. 
 <<>>=
@@ -86,19 +91,26 @@ hg19[["chrX"]]
 chrLen <- unlist(lapply(seqnames(hg19), function(x) length(hg19[[x]])))
 chrLen
 names(chrLen) <- seqnames(hg19)
+
 @
+
+<<>>=
+chrLen <- chrLen[chrLen>5000000]
+barplot(chrLen)
+@
+
 
 \subsection{Alphabet Frequencies}
 
 <<>>=
-alphabetFrequency(hg19[["chrX"]],baseOnly=TRUE)
-alphabetFrequency(hg19[["chrY"]],baseOnly=TRUE) / chrLen["chrX"]
+alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE)
+alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE) / chrLen["chr22"]
 @
 
 
 <<>>=
 library(GenomicRanges)
-rngs <- GRanges("chrX",IRanges(start=seq(1, chrLen["chrX"]-100000,100000),width=100000))
+rngs <- GRanges("chr22",IRanges(start=seq(1, chrLen["chr22"]-100000,100000),width=100000))
 winSeq <- getSeq(hg19,rngs)
 winAf <- alphabetFrequency(winSeq,baseOnly=TRUE)
 @
@@ -114,13 +126,13 @@ points(winAf[,5], pch="N", col="black")
 
 @
 
-\usecase Find which windows have over 50\% GC content. Which ranges does these correspond to?
+\usecase Find which windows have over 60\% GC content. Which ranges does these correspond to?
 
 <<>>=
 gcPerc <- (winAf[,2] + winAf[,3]) / 100000
 hist(gcPerc)
-winAf[gcPerc > 0.5,]
-rngs[gcPerc > 0.5]
+winAf[gcPerc > 0.6,]
+rngs[gcPerc > 0.6]
 @
 
 \subsection{Finding sequences}
@@ -132,86 +144,122 @@ s1 <- "aaaatgcagtaacccatgccc"
 matchPattern("atg", s1)
 @
 
+Masked regions on the genome can be identified by long stretches of N bases
 
-\usecase Use the \Rfunction{matchPattern} function to find potential start sites in chromosome X
+\usecase Use the \Rfunction{matchPattern} function to find potential start sites in Chromosome 22
 
 <<>>=
-matchPattern("ATG", hg19[["chrX"]])
+n.matches <- matchPattern("NNNNNNNNNN", hg19[["chr22"]])
+maskRegions <- IRanges(start=start(n.matches),end=end(n.matches))
 @
 
-
+\usecase create a set of non-overlapping intervals using \Rfunction{reduce}
+<<>>=
+maskRegions <- reduce(maskRegions)
+@
 
 \subsection{Working with Gene sequences}
 
-We are given a text file containing the positions of genes on the X chromosome. Our task is to read this file, produce a Genomic Ranges representation of the data and start to explore the sequences of the genes.
+We are given a text file containing the positions of genes on chromosome 22. Our task is to read this file, produce a Genomic Ranges representation of the data and start to explore the sequences of the genes.
 
 <<>>=
-xInfo <- read.delim("hg19.chrXGenes.txt")
-head(xInfo)
+chr22Info <- read.delim("hg19.chr22Genes.txt")
+head(chr22Info)
 @
 
+Creating a GRanges object
+
 <<>>=
-xGenePos <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]))
+chr22Rng <- GRanges(chr22Info[,4], IRanges(chr22Info[,3], chr22Info[,5]))
 @
 
 However, we might want to keep track of the name of each gene. We can do this be using extra arguments
 <<>>=
-xGenePos <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]),GeneSymbol=xInfo[,2],EntrezID=xInfo[,1])
+chr22Rng <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]),
+                    GeneSymbol=xInfo[,2],EntrezID=xInfo[,1])
 @
+
+The extra information forms part of the element metadata. To see what metadata we have stored currently, we can use the mcols function. The actual variables can be accessed using the \$ operator with the name of the variable.
+
+\usecase See what metadata is stored with the ranges object. Print out the gene symbols
+
+
+<<>>=
+mcols(chr22Rng)
+chr22Rng$GeneSymbol
+@
+
 
 \usecase Find the ID of the longest and shortest exon
 
 <<>>=
-id.of.longest <- which.max(width(xGenePos))
-xGenePos[id.of.longest,]
-id.of.shortest <- which.min(width(xGenePos))
-xGenePos[id.of.shortest,]
+id.of.longest <- which.max(width(chr22Rng))
+chr22Rng[id.of.longest]
+id.of.shortest <- which.min(width(chr22Rng))
+chr22Rng[id.of.shortest]
 @
 
 Genes can have multiple entries, depending on how many different transcripts are defined for them.
 
 \usecase Which gene has the most number of transcrips
 <<>>=
-sort(table(xGenePos$EntrezID))
-most.transcripts <- names(sort(table(xGenePos$EntrezID),decreasing=TRUE))[1]
-xGenePos[which(xGenePos$EntrezID  == most.transcripts)]
+sort(table(chr22Rng$EntrezID))
+most.transcripts <- names(sort(table(chr22Rng$EntrezID),decreasing=TRUE))[1]
+chr22Rng[which(chr22Rng$EntrezID  == most.transcripts)]
 @
 
 
 Lets' find out how many genes can be found in the windows we defined earlier
 
 <<>>=
-xGenePos <- sort(xGenePos)
+chr22Rng <- sort(chr22Rng)
 @
 
 \usecase Can you explain the warning message in the following?
 
 <<>>=
-findOverlaps(rngs, xGenePos)
+findOverlaps(rngs, chr22Rng)
 @
 
 <<>>=
-xGenePos <- renameSeqlevels(xGenePos, value=c("X"="chrX"))
-findOverlaps(rngs, xGenePos)
+chr22Rng <- renameSeqlevels(chr22Rng, value=c("22"="chr22"))
+findOverlaps(rngs, chr22Rng)
 @
 
 <<>>=
-nOverlaps <- countOverlaps(rngs,xGenePos)
+nOverlaps <- countOverlaps(rngs,chr22Rng)
 deserts <- rngs[which(nOverlaps==0)]
 deserts
 @
 
 <<>>=
 which.max(nOverlaps)
-geneRich <- rngs[which.max(nOverlaps)]
-
-xGenePos[xGenePos %over% geneRich]
+mostGenes <- rngs[which.max(nOverlaps)]
+mostGenes
+chr22Rng[chr22Rng %over% mostGenes]
 @
+
+\subsection{Retrieving the sequence for a gene}
+
+We can of course retrieve the full sequence for a gene
+
+<<>>=
+chr22seqs <- getSeq(hg19, chr22Rng)
+chr22seqs
+@
+
+However, there are options available for when we don't want the full sequence, or want to obtain sequences beyond that defined by the gene.
 
 Get flanking sequences.....
 
 <<>>=
+chr22Flanks <- flank(chr22Rng,100)
+chr22FlankSeq <- getSeq(hg19,chr22Flanks)
+@
 
+<<>>=
+resize(chr22Rng, 50)
+getSeq(hg19,resize(chr22Rng, 50))
 @
 
 \section{Reading bam alignments}
@@ -225,6 +273,7 @@ Read the example bam file into R as a \Robject{GRanges} object. How many reads a
 
 
 <<>>=
+library(GenomicAlignments)
 mybam <- "exampleData/NA19914.chr22.bam"
 bam <- readGAlignments(file=mybam)
 bam
@@ -243,6 +292,29 @@ range(start(bam))
 head(sort(table(cigar(bam)), decreasing=TRUE))
 @
 
+<<>>=
+bam <- readGAlignments(file=mybam, param=ScanBamParam(what=c("seq","mapq","flag")))
+@
+
+Mapping qualities......
+
+<<>>=
+hist(mcols(bam)$mapq)
+bam[mcols(bam)$mapq==0]
+@
+
+
+Cigar.....
+
+<<>>=
+bestReads <- bam[cigar(bam) == "68M"]
+bestRngs <- GRanges("chr22", ranges(bestReads))
+gSeqs <- getSeq(hg19, bestRngs)
+alignedSeqs <- mcols(bestReads)$seq
+gSeqs[1:5]
+alignedSeqs[1:5]
+sum(alignedSeqs == gSeqs)
+@
 
 
 Several range operations will work on the GappedAlignment object, such as \Rfunction{coverage}.
