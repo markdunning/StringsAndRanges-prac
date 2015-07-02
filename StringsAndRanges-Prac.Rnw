@@ -23,7 +23,7 @@ BiocStyle::latex()
 @
 
 
-\title{Introduction to Strings and Ranges in Bioconductor}
+\title{Representing sequencing data in Bioconductor}
 
 \author{Mark Dunning \email{mark.dunning@cruk.cam.ac.uk}}
 \date{Last modified: \today}
@@ -52,306 +52,167 @@ options(digits=3, width=80, prompt=" ", continue=" ")
 @
 
 
-\section{Ranges and GRanges}
-\subsection{Ranges}
-\Rclass{IRanges} are another fundamental concept in Bioconductor used to represent consecutive integers. We will illustrate the usage of the package using simple illustrative examples before introducing genomic data later on.
 
+\section{Accessing Genome Sequence}
 
 \usecase
-Construct an \Rclass{IRanges} object with start positions between 50 and 150 and varying lengths between 1 and 25
 
+Load the package that contains a representaion of the Human Genome version hg19. 
 <<>>=
-library(IRanges)
-starts <- floor(runif(n=50,min=50,max=150))
-ends <- starts + floor(runif(n=50,min=1,max=25))
-query <- IRanges(start = starts, end=ends)
-query <- sort(query)
+library(BSgenome.Hsapiens.UCSC.hg19)
+hg19 <- BSgenome.Hsapiens.UCSC.hg19
 @
 
 
+What chromosomes are available?
 
-A number of \textit{Intra-range} operations are implemented that act on each range independantly. You may find this function from UC Riverside HT-sequencing guide by Thomas Girke \footnote{http://manuals.bioinformatics.ucr.edu/home/ht-seq} useful in understanding the ranges objects.
-<<>>=
-source("scripts//plotRanges.R")
-plotRanges
-@
-
-\usecase
-Experiment with the basic operations \Rfunction{shift} and \Rfunction{resize}.
+\usecase How many chromosomes does the package have sequences for?
 
 <<>>=
-shift(query,5)
-plotRanges(shift(query,5))
-plotRanges(resize(query,4))
+seqnames(hg19)
+names(hg19)
+length(seqnames(hg19))
 @
 
-
-On the other hand, \textit{Inter-range} methods operate on a whole collection of ranges. Examples include \Rfunction{reduce}, \Rfunction{gaps} and \Rfunction{coverage}.
+\usecase Get the sequence for Chromosome X. How many bases long is the sequence?
 
 <<>>=
-plotRanges(reduce(query))
+hg19[["chrX"]]
 @
 
-Coverage (or sometimes depth) is the operation for calculating how many ranges overlap each position. In the \Biocpkg{IRanges} implementation of this calculation, the output is a Run-length encoding ({\tt RLE}).
-
-\usecase
-Calculate the coverage of the example IRanges object. Make sure you understand the run-length encoding output.
-
+\usecase What is the length of each chromosome?
 
 <<>>=
-coverage(query)
-plot(coverage(query))
+chrLen <- unlist(lapply(seqnames(hg19), function(x) length(hg19[[x]])))
+chrLen
+names(chrLen) <- seqnames(hg19)
 @
 
-
-Comparisons of \Rclass{IRanges} objects are crucial for many downstream analyses of sequencing data. e.g. counting reads within particular genes. Many such comparisons are supported by the \Biocpkg{IRanges} package. Typically, two sets of ranges are required; a \Robject{query} and a \Robject{subject}. However, the nature of the output depends on the function.
-
-We will illustrate these functions by constructing windows that start at even intervals, but have varying length
-
-\usecase
-Define a series of windows that start at regular intervals between 30 and 160, but with varying lengths
+\subsection{Alphabet Frequencies}
 
 <<>>=
-start2 <- seq(30,160,by=10)
-subject <- IRanges(start = start2, width=sample(1:10,length(start2),replace=T))
-  
-par(mfrow=c(3,1))
-plotRanges(query,xlim=c(0,150))
-plotRanges(subject,xlim=c(0,150))
-
+alphabetFrequency(hg19[["chrX"]],baseOnly=TRUE)
+alphabetFrequency(hg19[["chrY"]],baseOnly=TRUE) / chrLen["chrX"]
 @
 
-\Rfunction{precede} and \Rfunction{follow} are two ways of comparing Ranges objects For each range in x, \Rfunction{precede} returns the index of the interval in \Robject{subject} that is directly preceded by the \Robject{query} range. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
-
-The opposite of \Rfunction{precede}, \Rfunction{follow} returns the index of the range in \Robject{subject} that a \Robject{query} range in x directly follows. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
-
-
-\usecase
-Use \Rfunction{precede}, \Rfunction{follow} and \Rfunction{nearest} on the \Robject{query} and \Robject{subject} objects that we have created.
-
-<<>>=
-prec <- precede(query, subject) 
-foll <- follow(query, subject) 
-query[1:10]
-subject[prec[1:10]]
-subject[foll[1:10]]
-nearest(query,subject)
-@
-
-
-The degree of overlap between \Robject{query} and \Robject{subject} ranges can be investigated in a number of ways.  The \Rfunction{findOverlaps} function is the simplest way of finding which intervals in one set overlap another. The returned object stored the indices of the query and subject ranges that overlap. The \Rfunction{countOverlaps} is a convenient way of counting the number of ranges in the query overlap with the subject. If we are interested in the actual ranges where an overlap occurs (or does not occur), we can use the \Rfunction{intersect} and \Rfunction{setdiff} functions.
-
-
-\usecase
-Investigate the degree of overlap between the \Robject{query} and \Robject{subject} ranges.
-
-
-<<>>=
-olaps <- findOverlaps(subject, query)
-queryHits(olaps)
-countOverlaps(query, subject)
-countOverlaps(subject, query)
-
-
-plotRanges(intersect(query,subject),xlim=c(0,200))
-plotRanges(setdiff(query,subject),xlim=c(0,200))
-
-@
-
-\subsection{GRanges}
-
-\Robject{GRanges} objects are an extension of IRanges that can incorporate Genomic information such as chromosome names (commonly called seqnames) and strand information.
-
-\usecase
-Construct a \Robject{GRanges} object from the query and subject data in the previous exercise, allocating each range to sequences \textbf{A}, \textbf{B} or \textbf{C}. Explore the relationship between the objects as in the previous exercises.
 
 <<>>=
 library(GenomicRanges)
-gr <- GRanges(seqnames=sample(LETTERS[1:3],length(query),replace=T), ranges=query)
-gr <- sort(gr)
-
-gr2 <- GRanges(seqnames=sample(LETTERS[1:3],length(subject),replace=T), ranges=subject)
-gr2 <- sort(gr2)
-shift(gr,5)
-reduce(gr)
-gaps(gr)
-gaps(gr2)
-coverage(gr)
-coverage(gr2)
+rngs <- GRanges("chrX",IRanges(start=seq(1, chrLen["chrX"]-100000,100000),width=100000))
+winSeq <- getSeq(hg19,rngs)
+winAf <- alphabetFrequency(winSeq,baseOnly=TRUE)
 @
-
-\textinfo In later practicals, we will see how can perform overlaps of genomic features using this same infrastructure. 
-
-
-\section{Strings}
-
-
-\subsection{Strings in R}
-Before explaining the specialised string manipulation features available in Bioconductor, we will use some featuers from the R base code. Written long before the age of next-generation sequencing, these are not designed to deal with large volumes of data. Nevertheless, some useful operations are possible.
-
-Here we will define a function to create a random set of DNA sequences with configurable lengths that we will work with in the following exercises. Each string is a separate item in a vector, so the usual subset conventions apply.
-
-
-\usecase
-Use the \Rfunction{randomDNAString} function, defined in the scripts folder, to construct 500 random sequence of A, T, G,, C. By default each sequence will be of length between 10 and 20 [How do you know this?] . Print out the first five strings.
-<<>>=
-
-source("scripts/randomDNAString.R")
-randomDNAString
-rand <- randomDNAString()
-rand
-rand[1:5]
-@
-
-
-
-\usecase
-What is the distribution of the number of characters in each string? Select the strings with exactly 10 characters.
-
-<<>>=
-nchar(rand)
-summary(nchar(rand))
-hist(nchar(rand))
-rand[nchar(rand)== 10]
-@
-
-
-
-\usecase
-How many occurences of the the string AAA are there? Replace AAA with the string NNN
 
 
 <<>>=
-rand[grep("AAAA", rand)]
-
-gsub("AAA", "NNN", rand)
+plot(winAf[,1] ,type="n")
+points(winAf[,1], pch="A",col="red")
+points(winAf[,2], pch="C", col="green")
+points(winAf[,3], pch="G", col="blue")
+points(winAf[,4], pch="T", col="purple")
+points(winAf[,5], pch="N", col="black")
 
 @
 
-
-\usecase
-Subset each string to the first 3 characters. What is the most common 3-letter string?
-
+\usecase Find which windows have over 50\% GC content. Which ranges does these correspond to?
 
 <<>>=
-rand.sub <- substr(rand, 1,3)
-rand[1:10]
-rand.sub[1:10]
-sort(table(substr(rand, 1,3)))
-
+gcPerc <- (winAf[,2] + winAf[,3]) / 100000
+hist(gcPerc)
+winAf[gcPerc > 0.5,]
+rngs[gcPerc > 0.5]
 @
 
-
-\subsection{Strings in Bioconductor; Biostrings}
-The \Biocpkg{Biostrings} package in Bioconductor provides tools for working with sequences. The packages implements the base string manipulation functions in R, plus much more besides. The functions are written in a memory-efficient manner and the implemented object-types are the foundation upon which more-complex operations are built-upon. The basic object type that we will use is the \Rclass{DNAStringSet}, which is a collection of the more basic \Rclass{DNAString}. The subsetting of \Rclass{DNAStringSet} object operates as you would expect.
-
-
-
-\usecase
-Create a set of 1000 DNA sequences that vary between length 5 and 100 and use this to make a DNAStringSet instance
-
-
-<<>>=
-library(Biostrings)
-rand2 <- randomDNAString(N=1000,minL=5,maxL=100)
-myseq <- DNAStringSet(rand2)
-myseq
-
-@
-
-You will notice that the object is displayed in a more convenient way to the random string, and the length (width) of each string is displayed alongside it. The width of each string can be accessed by the \Rfunction{width} function. The \Rclass{DNAStringSet} objects can be subset in the same ways as standard R vectors.
-
-
-\usecase
-Create a summary of the string length distributions. Select all strings with less than 10 characters.
+\subsection{Finding sequences}
 
 
 
 <<>>=
-summary(width(myseq))
-hist(width(myseq))
-myseq[width(myseq)<10]
-as.character(myseq[width(myseq)<10])
+s1 <- "aaaatgcagtaacccatgccc"
+matchPattern("atg", s1)
 @
 
-Many standard R functions have also been adapted to work for the \Rclass{DNAStringSet}. These include \Rfunction{sort}, \Rfunction{head}, \Rfunction{rev} and \Rfunction{tail}. 
 
-\usecase
-Explore the behaviour of the \Rfunction{subseq}, \Rfunction{sort}, \Rfunction{head}, \Rfunction{tail} and \Rfunction{rev}
+\usecase Use the \Rfunction{matchPattern} function to find potential start sites in chromosome X
 
 <<>>=
-subseq(myseq, 1, 3)
-sort(myseq)
-head(myseq)
-tail(myseq)
-head(rev(myseq))
+matchPattern("ATG", hg19[["chrX"]])
 @
 
 
-Another common operation is to be able to count the ocurrences of letters in each string. This could be achieved by use of the \Rfunction{table} function, but a more efficient implementation is provided in \Rfunction{alphabetFrequency}. Calculating the frequency of 2-mer and 3-mers is also possible.
 
+\subsection{Working with Gene sequences}
 
-\usecase
-Calculate the frequencing of letters in each string and make sure that you understand the dimensions of the \Rfunction{alphabetFrequency} output. Check for any biases in base distribution. Do any sequences not contain any As?
-
-
-<<letterFreqency>>=
-af <- alphabetFrequency(myseq, baseOnly=TRUE)
-dim(af)
-head(af)
-myseq[af[,1] ==0,]
-boxplot(af)
-boxplot(dinucleotideFrequency(myseq),las=2)
-boxplot(trinucleotideFrequency(myseq),horizontal=T,las=2)
-
-@
-
-
-\usecase
-Modify the alphabet frequency table so that it accounts the different string lengths
-
+We are given a text file containing the positions of genes on the X chromosome. Our task is to read this file, produce a Genomic Ranges representation of the data and start to explore the sequences of the genes.
 
 <<>>=
-af2 <- alphabetFrequency(myseq, baseOnly=TRUE)/width(myseq)
-boxplot(af2)
+xInfo <- read.delim("hg19.chrXGenes.txt")
+head(xInfo)
 @
-
-
-\usecase
-Calculate the percentage of Gs and Cs for each string. Find any strings with greater than 75\% GC bases.
-
 
 <<>>=
-gcCounts <- af2[,"C"] + af2[,"G"]
-summary(gcCounts)
-myseq[gcCounts > 0.75]
+xGenePos <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]))
 @
 
+However, we might want to keep track of the name of each gene. We can do this be using extra arguments
+<<>>=
+xGenePos <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]),GeneSymbol=xInfo[,2],EntrezID=xInfo[,1])
+@
 
-\usecase
-Reverse, complement, and translate the sequences
-
+\usecase Find the ID of the longest and shortest exon
 
 <<>>=
-reverse(myseq)
-reverseComplement(myseq)
-translate(myseq)
+id.of.longest <- which.max(width(xGenePos))
+xGenePos[id.of.longest,]
+id.of.shortest <- which.min(width(xGenePos))
+xGenePos[id.of.shortest,]
 @
 
-After manipulating our set of sequences, we may wish to export them for analysis in some external tool. A common format for sequence representation is \textit{fasta} which usually has the file extension {\tt .fa}.
+Genes can have multiple entries, depending on how many different transcripts are defined for them.
+
+\usecase Which gene has the most number of transcrips
+<<>>=
+sort(table(xGenePos$EntrezID))
+most.transcripts <- names(sort(table(xGenePos$EntrezID),decreasing=TRUE))[1]
+xGenePos[which(xGenePos$EntrezID  == most.transcripts)]
+@
 
 
-\usecase
-Write your sequences out to a file
-
+Lets' find out how many genes can be found in the windows we defined earlier
 
 <<>>=
-writeXStringSet(myseq, file="myseq.fa")
+xGenePos <- sort(xGenePos)
 @
 
+\usecase Can you explain the warning message in the following?
 
+<<>>=
+findOverlaps(rngs, xGenePos)
+@
 
-\section{Accessing Genome Sequence}
+<<>>=
+xGenePos <- renameSeqlevels(xGenePos, value=c("X"="chrX"))
+findOverlaps(rngs, xGenePos)
+@
+
+<<>>=
+nOverlaps <- countOverlaps(rngs,xGenePos)
+deserts <- rngs[which(nOverlaps==0)]
+deserts
+@
+
+<<>>=
+which.max(nOverlaps)
+geneRich <- rngs[which.max(nOverlaps)]
+
+xGenePos[xGenePos %over% geneRich]
+@
+
+Get flanking sequences.....
+
+<<>>=
+
+@
 
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
