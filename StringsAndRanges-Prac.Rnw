@@ -41,7 +41,7 @@ BiocStyle::latex()
 
 \tableofcontents
 
-\section{Introduction}
+\section*{Introduction}
 
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
@@ -50,6 +50,137 @@ The purpose of this practical is to familiarise you with the concept of strings 
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
 @
+
+
+\section{Ranges and GRanges}
+\subsection{Ranges}
+\Rclass{IRanges} are another fundamental concept in Bioconductor used to represent consecutive integers. We will illustrate the usage of the package using simple illustrative examples before introducing genomic data later on.
+
+
+\usecase
+Construct an \Rclass{IRanges} object with start positions between 50 and 150 and varying lengths between 1 and 25
+
+<<>>=
+library(IRanges)
+starts <- floor(runif(n=50,min=50,max=150))
+ends <- starts + floor(runif(n=50,min=1,max=25))
+query <- IRanges(start = starts, end=ends)
+query <- sort(query)
+@
+
+
+
+A number of \textit{Intra-range} operations are implemented that act on each range independantly. You may find this function from UC Riverside HT-sequencing guide by Thomas Girke \footnote{http://manuals.bioinformatics.ucr.edu/home/ht-seq} useful in understanding the ranges objects.
+<<>>=
+source("scripts//plotRanges.R")
+plotRanges
+@
+
+\usecase
+Experiment with the basic operations \Rfunction{shift} and \Rfunction{resize}.
+
+<<>>=
+shift(query,5)
+plotRanges(shift(query,5))
+plotRanges(resize(query,4))
+@
+
+
+On the other hand, \textit{Inter-range} methods operate on a whole collection of ranges. Examples include \Rfunction{reduce}, \Rfunction{gaps} and \Rfunction{coverage}.
+
+<<>>=
+plotRanges(reduce(query))
+@
+
+Coverage (or sometimes depth) is the operation for calculating how many ranges overlap each position. In the \Biocpkg{IRanges} implementation of this calculation, the output is a Run-length encoding ({\tt RLE}).
+
+\usecase
+Calculate the coverage of the example IRanges object. Make sure you understand the run-length encoding output.
+
+
+<<>>=
+coverage(query)
+plot(coverage(query))
+@
+
+
+Comparisons of \Rclass{IRanges} objects are crucial for many downstream analyses of sequencing data. e.g. counting reads within particular genes. Many such comparisons are supported by the \Biocpkg{IRanges} package. Typically, two sets of ranges are required; a \Robject{query} and a \Robject{subject}. However, the nature of the output depends on the function.
+
+We will illustrate these functions by constructing windows that start at even intervals, but have varying length
+
+\usecase
+Define a series of windows that start at regular intervals between 30 and 160, but with varying lengths
+
+<<>>=
+start2 <- seq(30,160,by=10)
+subject <- IRanges(start = start2, width=sample(1:10,length(start2),replace=T))
+  
+par(mfrow=c(3,1))
+plotRanges(query,xlim=c(0,150))
+plotRanges(subject,xlim=c(0,150))
+
+@
+
+\Rfunction{precede} and \Rfunction{follow} are two ways of comparing Ranges objects For each range in x, \Rfunction{precede} returns the index of the interval in \Robject{subject} that is directly preceded by the \Robject{query} range. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
+
+The opposite of \Rfunction{precede}, \Rfunction{follow} returns the index of the range in \Robject{subject} that a \Robject{query} range in x directly follows. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
+
+
+\usecase
+Use \Rfunction{precede}, \Rfunction{follow} and \Rfunction{nearest} on the \Robject{query} and \Robject{subject} objects that we have created.
+
+<<>>=
+prec <- precede(query, subject) 
+foll <- follow(query, subject) 
+query[1:10]
+subject[prec[1:10]]
+subject[foll[1:10]]
+nearest(query,subject)
+@
+
+
+The degree of overlap between \Robject{query} and \Robject{subject} ranges can be investigated in a number of ways.  The \Rfunction{findOverlaps} function is the simplest way of finding which intervals in one set overlap another. The returned object stored the indices of the query and subject ranges that overlap. The \Rfunction{countOverlaps} is a convenient way of counting the number of ranges in the query overlap with the subject. If we are interested in the actual ranges where an overlap occurs (or does not occur), we can use the \Rfunction{intersect} and \Rfunction{setdiff} functions.
+
+
+\usecase
+Investigate the degree of overlap between the \Robject{query} and \Robject{subject} ranges.
+
+
+<<>>=
+olaps <- findOverlaps(subject, query)
+queryHits(olaps)
+countOverlaps(query, subject)
+countOverlaps(subject, query)
+
+
+plotRanges(intersect(query,subject),xlim=c(0,200))
+plotRanges(setdiff(query,subject),xlim=c(0,200))
+
+@
+
+\subsection{GRanges}
+
+\Robject{GRanges} objects are an extension of IRanges that can incorporate Genomic information such as chromosome names (commonly called seqnames) and strand information.
+
+\usecase
+Construct a \Robject{GRanges} object from the query and subject data in the previous exercise, allocating each range to sequences \textbf{A}, \textbf{B} or \textbf{C}. Explore the relationship between the objects as in the previous exercises.
+
+<<>>=
+library(GenomicRanges)
+gr <- GRanges(seqnames=sample(LETTERS[1:3],length(query),replace=T), ranges=query)
+gr <- sort(gr)
+
+gr2 <- GRanges(seqnames=sample(LETTERS[1:3],length(subject),replace=T), ranges=subject)
+gr2 <- sort(gr2)
+shift(gr,5)
+reduce(gr)
+gaps(gr)
+gaps(gr2)
+coverage(gr)
+coverage(gr2)
+@
+
+\textinfo In later practicals, we will see how can perform overlaps of genomic features using this same infrastructure. 
 
 
 \section{Strings}
@@ -219,273 +350,8 @@ writeXStringSet(myseq, file="myseq.fa")
 @
 
 
-\section{Fastq analysis with ShortRead}
-We are now going to deal with real, rather than simulated, data. The \Biocpkg{ShortRead} packages is one of the many Bioconductor packages that relies on \Biocpkg{Biostrings} for its core functionality. 
 
-The FASTQ format is now the industry-standard way that sequencers produce output. 
-
-\begin{verbatim}@SRR031724.1 HWI-EAS299_4_30M2BAAXX:5:1:1513:1024 length=37
-GTTTTGTCCAAGTTCTGGTAGCTGAATCCTGGGGCGC
-+SRR031724.1 HWI-EAS299_4_30M2BAAXX:5:1:1513:1024 length=37
-IIIIIIIIIIIIIIIIIIIIIIIIIIII+HIIII<IE
-\end{verbatim}
-
-Each read is given a unique identifier that is repeated on the first and third lines, although it can be omitted from the third line. Typically this identifier includes the name of the sequencing machine, lane, tile and coordinates of the read. The second and fourth lines are the nucleotides and quality scores respectively. The quality score is represented as a letter from the ASCII alphabet, with letters higher in the alphabet representing a higher quality and more-confident base-call.
-
-
-\begin{verbatim}
-!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO
-PQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
-\end{verbatim}
-
-Reading the fastq file into R allows quality control steps to be performed and the generation of the type of plots that are produced by the fastqc tool \footnote{\tt http://www.bioinformatics.babraham.ac.uk/projects/fastqc/}. 
-
-
-
-\usecase
-
-Remind yourself of the format of a fastq file by reading the first few lines of example file that we have provided in the {\tt exampleData} folder. Then, read the file using the \Biocpkg{ShortRead} package. How many sequencing reads does the file contain?
-
-
-
-<<>>=
-
-myfile <- "exampleData/sample.fq"
-
-readLines(myfile,n=10)
-library(ShortRead)
-fq <- readFastq(myfile)
-fq
-@
-\textinfo To read your own fastq file into ShortRead, simply change the value of the \Robject{myfile} variable to point to the fastq file that you want to read. If you have trouble typing the path to the file, try the \Rfunction{file.choose} function.\\
-
-
-
-The \Robject{fq} object is of type \Rclass{ShortReadQ} and particular aspects of the object can be accessed by the \Rfunction{sread}, \Rfunction{quality} and \Rfunction{width} functions.
-
-\usecase
-Explore the ShortRead object by extracing the names, qualities and sequences of the reads themselves. What length are the reads?
-
-
-<<>>=
-sread(fq)
-quality(fq)
-id(fq)
-table(width(fq))
-@
-
-Hopefully you will recognise the format that the reads are stored in. By using the Biostrings common infrastrucure, the operations we introduced earlier can be used on sequencing reads. Also, some commonly-used operations have been provided. A typical usage for reading fastq files is for quality assessment using the imported quality scores and seqeunces themselves. The \Rfunction{alphabetByCycle} function is provided as a convenience function to count the number of occurences of each base at each position in the read.
-
-
-\usecase
-Obtain a matrix of the base-frequency at each cycle and compare how it changes along the read by making separate lines for each base.
-
-
-<<>>=
-abc <- alphabetByCycle(sread(fq))
-dim(abc)
-plot(abc[1,],type="n",ylim=range(0,max(abc)))
-
-text(abc[1,],labels="A",col="red")
-text(abc[2,],labels="C",col="orange")
-text(abc[3,],labels="G",col="green")
-text(abc[4,],labels="T",col="blue")
-
-@
-\textinfo By using \Rcode{type='n'} we tell the \Rfunction{plot} function to create an empty plot with axes and labels, but no points. We add details to this empty plot using the \Rfunction{text} function.\\
-
-\usecase
-Calculate the GC content of each read using the \Rfunction{gcFunction} function in the {\tt scripts} folder. Find any reads with over 90\% GC bases
-
-<<>>=
-
-source("scripts/gcFunction.R")
-
-
-gc <- gcFunction(sread(fq))
-hist(gc)
-
-sread(fq)[gc > 0.9]
-
-@
-
-We can also seek to find how many times each sequence occur in the file. Over-represented sequences could be adaptor sequences, or other artefacts.
-
-\usecase
-Find the most-commonly ocurring sequences in the file
-
-<<>>=
-
-tbl <- tables(fq)
-names(tbl)
-tbl$top[1:5]
-tbl$distribution
-
-@
-
-If we see an unacceptable drop in quality at the end of a read, we may wish to trim the sequences before aligning.
-
-\usecase
-Convert the quality scores into a more manageable format and visualise the quality drop-off towards the end of the read.
-
-
-<<>>=
-qual <- as(quality(fq), "matrix")
-dim(qual)
-plot(colMeans(qual), type="b")
-abline(h=26)
-@
-
-For illustration purposes, we will choose a minimum cut-off of 26. 
-
-\usecase
-Trim the sequences to ensure a mean quality of 26 and construct a new {\tt fastq} file from the trimmed sequences and qualities.
-
-
-<<>>=
-
-minQual <- 26
-trimL <- min(which(colMeans(qual) < minQual))
-
-trimmed.seq <- subseq(sread(fq),1,trimL)
-trimmed.seq
-quals <- subseq(quality(fq)@quality,1,trimL)
-
-names(trimmed.seq) <- id(fq)
-writeXStringSet(trimmed.seq, file="trimmed.fq", format="fastq",qualities=quals)
-@
-
-
-
-\section{Ranges and GRanges}
-\subsection{Ranges}
-\Rclass{IRanges} are another fundamental concept in Bioconductor used to represent consecutive integers. We will illustrate the usage of the package using simple illustrative examples before introducing genomic data later on.
-
-
-\usecase
-Construct an \Rclass{IRanges} object with start positions between 50 and 150 and varying lengths between 1 and 25
-
-<<>>=
-library(IRanges)
-starts <- floor(runif(n=50,min=50,max=150))
-ends <- starts + floor(runif(n=50,min=1,max=25))
-query <- IRanges(start = starts, end=ends)
-query <- sort(query)
-@
-
-
-
-A number of \textit{Intra-range} operations are implemented that act on each range independantly. You may find this function from UC Riverside HT-sequencing guide by Thomas Girke \footnote{http://manuals.bioinformatics.ucr.edu/home/ht-seq} useful in understanding the ranges objects.
-<<>>=
-source("scripts//plotRanges.R")
-plotRanges
-@
-
-\usecase
-Experiment with the basic operations \Rfunction{shift} and \Rfunction{resize}.
-
-<<>>=
-shift(query,5)
-plotRanges(shift(query,5))
-plotRanges(resize(query,4))
-@
-
-
-On the other hand, \textit{Inter-range} methods operate on a whole collection of ranges. Examples include \Rfunction{reduce}, \Rfunction{gaps} and \Rfunction{coverage}.
-
-<<>>=
-plotRanges(reduce(query))
-@
-
-Coverage (or sometimes depth) is the operation for calculating how many ranges overlap each position. In the \Biocpkg{IRanges} implementation of this calculation, the output is a Run-length encoding ({\tt RLE}).
-
-\usecase
-Calculate the coverage of the example IRanges object. Make sure you understand the run-length encoding output.
-
-
-<<>>=
-coverage(query)
-plot(coverage(query))
-@
-
-
-Comparisons of \Rclass{IRanges} objects are crucial for many downstream analyses of sequencing data. e.g. counting reads within particular genes. Many such comparisons are supported by the \Biocpkg{IRanges} package. Typically, two sets of ranges are required; a \Robject{query} and a \Robject{subject}. However, the nature of the output depends on the function.
-
-We will illustrate these functions by constructing windows that start at even intervals, but have varying length
-
-\usecase
-Define a series of windows that start at regular intervals between 30 and 160, but with varying lengths
-
-<<>>=
-start2 <- seq(30,160,by=10)
-subject <- IRanges(start = start2, width=sample(1:10,length(start2),replace=T))
-  
-par(mfrow=c(3,1))
-plotRanges(query,xlim=c(0,150))
-plotRanges(subject,xlim=c(0,150))
-
-@
-
-\Rfunction{precede} and \Rfunction{follow} are two ways of comparing Ranges objects For each range in x, \Rfunction{precede} returns the index of the interval in \Robject{subject} that is directly preceded by the \Robject{query} range. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
-
-The opposite of \Rfunction{precede}, \Rfunction{follow} returns the index of the range in \Robject{subject} that a \Robject{query} range in x directly follows. Overlapping ranges are excluded. \Rcode{NA} is returned when there are no qualifying ranges in subject.
-
-
-\usecase
-Use \Rfunction{precede}, \Rfunction{follow} and \Rfunction{nearest} on the \Robject{query} and \Robject{subject} objects that we have created.
-
-<<>>=
-prec <- precede(query, subject) 
-foll <- follow(query, subject) 
-query[1:10]
-subject[prec[1:10]]
-subject[foll[1:10]]
-nearest(query,subject)
-@
-
-
-The degree of overlap between \Robject{query} and \Robject{subject} ranges can be investigated in a number of ways.  The \Rfunction{findOverlaps} function is the simplest way of finding which intervals in one set overlap another. The returned object stored the indices of the query and subject ranges that overlap. The \Rfunction{countOverlaps} is a convenient way of counting the number of ranges in the query overlap with the subject. If we are interested in the actual ranges where an overlap occurs (or does not occur), we can use the \Rfunction{intersect} and \Rfunction{setdiff} functions.
-
-
-\usecase
-Investigate the degree of overlap between the \Robject{query} and \Robject{subject} ranges.
-
-
-<<>>=
-olaps <- findOverlaps(subject, query)
-queryHits(olaps)
-countOverlaps(query, subject)
-countOverlaps(subject, query)
-
-
-plotRanges(intersect(query,subject),xlim=c(0,200))
-plotRanges(setdiff(query,subject),xlim=c(0,200))
-
-@
-
-\subsection{GRanges}
-
-\Robject{GRanges} objects are an extension of IRanges that can incorporate Genomic information such as chromosome names (commonly called seqnames) and strand information.
-
-\usecase
-Construct a \Robject{GRanges} object from the query and subject data in the previous exercise, allocating each range to sequences \textbf{A}, \textbf{B} or \textbf{C}. Explore the relationship between the objects as in the previous exercises.
-
-<<>>=
-library(GenomicRanges)
-gr <- GRanges(seqnames=sample(LETTERS[1:3],length(query),replace=T), ranges=query)
-gr <- sort(gr)
-
-gr2 <- GRanges(seqnames=sample(LETTERS[1:3],length(subject),replace=T), ranges=subject)
-gr2 <- sort(gr2)
-shift(gr,5)
-reduce(gr)
-gaps(gr)
-gaps(gr2)
-coverage(gr)
-coverage(gr2)
-@
-
-\textinfo In later practicals, we will see how can perform overlaps of genomic features using this same infrastructure. 
+\section{Accessing Genome Sequence}
 
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
