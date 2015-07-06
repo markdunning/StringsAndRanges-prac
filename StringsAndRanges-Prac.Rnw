@@ -15,7 +15,7 @@
 library("knitr")
 opts_chunk$set(tidy=FALSE,dev="png",fig.show="hide",
                fig.width=4,fig.height=4.5,
-               message=FALSE,eval=FALSE)
+               message=FALSE,eval=FALSE,echo=TRUE)
 @ 
 
 <<style, eval=TRUE, echo=FALSE, results="asis">>=
@@ -55,6 +55,8 @@ options(digits=3, width=80, prompt=" ", continue=" ")
 
 \section{Accessing Genome Sequence}
 
+The \Biocpkg{BSgenome} package extends the \Biocpkg{Biostrings} package to work with whole-genome sequence data. Its main purpose is to permit us to query genome sequences in an efficient manner. Several genomes are available in Biocondutor that have been built using this infrastructure.
+
 \usecase See what genomes are currently available through Bioconductor
 
 <<>>=
@@ -62,69 +64,146 @@ library(BSgenome)
 available.genomes()
 @
 
-Load the package that contains a representaion of the Human Genome version hg19. 
+\bioccomment{If your genome of interest is not currently available in this list, it is possible to create your own package. However, doing this is probably not for the novice user. See the "How to forge a BSgenome data package" vignette in the BSgenome package. \Rcode{browseVignettes()}}
+
+Contained within each BSgenome package is a database object that we can use to make queries against. The name of the database is the same as the name of the package. However, as programmers don't like to type much, we often assign this to a shorter name
+
+\usecase Load the package that contains a representation of the Human Genome version hg19 and rename the database object to something more convenient.
+
 <<>>=
 library(BSgenome.Hsapiens.UCSC.hg19)
 hg19 <- BSgenome.Hsapiens.UCSC.hg19
+hg19
 @
 
 
-What chromosomes are available?
+The names of each chromosome can be found by using the \Rcode{names} function. Often in sequencing analysis in Bioconductor, we refer to these as the \textit{seqnames}.
 
 \usecase How many chromosomes does the package have sequences for?
 
 <<>>=
-seqnames(hg19)
 names(hg19)
+seqnames(hg19)
 length(seqnames(hg19))
 @
 
-\usecase Get the sequence for Chromosome X. How many bases long is the sequence?
+Each individual chromosome can be accessed using the double square brackets notation. If you have used lists in R, you might recognise this as the way of accessing items in a list
+\warning{You have to make sure that the chromosome name that you use is one of the valid names that is found in the \Rcode{seqnames} of the genome.}
+
+\usecase Get the sequence for Chromosome 22. How many bases long is the sequence? 
 
 <<>>=
-hg19[["chrX"]]
-@
-
-\usecase What is the length of each chromosome?
-
-<<>>=
-chrLen <- unlist(lapply(seqnames(hg19), function(x) length(hg19[[x]])))
-chrLen
-names(chrLen) <- seqnames(hg19)
+hg19[["chr22"]]
 
 @
 
+When we type the name of a \Rcode{DNAString}, rather than displaying the contents of the object, R will produce a summary on the screen. This is useful if we don't want our screen filled with text. This summary gives a snapshot of the string contents and prints the overall length. However, if we want to perform further computations that use this length, we will need to calculate it ourselves.
+
+\usecase Save the length of the chromosome as a variable. \bioccomment{HINT: What function do you use to find the length of a vector?}
+
 <<>>=
-chrLen <- chrLen[chrLen>5000000]
-barplot(chrLen)
+mylen <- length(hg19[["chr22"]])
+mylen
 @
+
 
 
 \subsection{Alphabet Frequencies}
 
+The \Rcode{alphabetFrequency} is a very useful and efficient tool provided by \Biocpkg{Biostrings} for calculating the number of occurences of each DNA base within a given \Rcode{DNAString}. In fact, it can operate on any alphabet. To tell the function to use only valid DNA bases, we can use the \Rcode{baseOnly=TRUE} argument. \bioccomment{As usual, we can see the help page for the function for more information about the arguments}
+
+\usecase Find the overall number of A, C, T and Gs in the sequence for Chromosome 22. Express these as a proportion of the total length of the chromosome.
+
+\bioccomment{You should have already calculated the length of chromsome 22 in a previous exercise.}
+
 <<>>=
 alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE)
-alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE) / chrLen["chr22"]
+alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE) / myLen
 @
 
+We would hope that the proportion of each base will be roughly the same along the entire chromosome. However, there may be local variations that we could explore. To do this, we need a strategy for dividing the chromsome into equal-sized windows. Lets choose a window size of 1000 bases. 
+
+The best way to construct the windows is to use a \Rcode{GRanges} object. To make such an object, we need to define a list of starting positions in the form of a vector. The \Rcode{seq} function in R is one of the basic ways of creating a sequence of integers in the form of a vector. To use this function we have to specify a start and end position. 
+
+\usecase Create a vector of start positions that can be used to divide up Chromosome 22 into 1000 base pair intervals. You will need to make sure that the last start position is 1000 less than the length of the chromosome. 
+
+<<>>=
+startpos <- seq(1,myLen-1000,1000)
+@
+
+\usecase Now calculate what the end position of each interval needs to be and create the \Rcode{IRanges} object.
+
+<<>>=
+endpos <- startpos + 999
+ir <- IRanges(startpos,endpos)
+ir
+@
+
+\bioccomment{Rather than explicitly calculating the position, we can just specify the start postions and a width argument}
+
+<<>>=
+ir <- IRanges(startpos,width=100)
+@
+
+
+\usecase Now construct a Genomic Ranges representation. Choose an appropriate value for the sequence name so that we can operate on chromosome 22.
 
 <<>>=
 library(GenomicRanges)
-rngs <- GRanges("chr22",IRanges(start=seq(1, chrLen["chr22"]-100000,100000),width=100000))
-winSeq <- getSeq(hg19,rngs)
-winAf <- alphabetFrequency(winSeq,baseOnly=TRUE)
+rngs <- GRanges("chr22",ir)
 @
 
+\warning{Again we need to be consistent about the chromosome names. The GRanges function will not check that the chromosome name you have given is valid!}
 
 <<>>=
+sillyrng <- GRanges("sausages",ir)
+sillyrng
+@
+
+The \Rcode{getSeq} function can be used to obtain the genomic sequence from a genome object. We can give it a ranges object, and it will get the sequence for each individual range.
+
+\usecase Get the sequence for each interval that you defined, and then calculate the alphabet frequency.
+
+<<>>=
+
+winSeq <- getSeq(hg19,rngs)
+winSeq
+winAf <- alphabetFrequency(winSeq,baseOnly=TRUE)
+head(winAf)
+@
+
+You will see that the output of this function is a matrix with 5 columns, and one row for each range. Each column gives the count of each DNA base, plus the end column for other bases (e.g. N). Recall that we can access columns and rows in a matrix using square brackets with row and column indices separated by a comma. e.g. \Rcode{matrix[row,column]}. We can omit either index to give all rows or columns.
+\Rcode{matrix[row,]} or \Rcode{matrix[,column]}. 
+
+\usecase Which window contains the most A bases? What interval on the genome does this correspond to? 
+
+<<>>=
+aOrd <- order(winAf[,1],decreasing = TRUE)
+head(winAf[aOrd,])
+rngs[aOrd]
+rngs[which.max(aOrd)]
+@
+
+This matrix can be visualised with the usual plotting functions in R. For instance, we might want to see how the distribution of bases varies across the chromosome.
+
+\usecase Construct a scatter plot that shows the distribution of DNA bases across the chromosome. Add separate lines and colours for each base.
+
+<<>>=
+pdf("BaseDist.pdf",width=10,height=10)
 plot(winAf[,1] ,type="n")
 points(winAf[,1], pch="A",col="red")
 points(winAf[,2], pch="C", col="green")
 points(winAf[,3], pch="G", col="blue")
 points(winAf[,4], pch="T", col="purple")
 points(winAf[,5], pch="N", col="black")
-
+dev.off()
 @
+
+
+<<>>=
+ordByA <- winAf[order(winAf[,1],decreasing=TRUE),]
+@
+
 
 \usecase Find which windows have over 60\% GC content. Which ranges does these correspond to?
 
@@ -135,9 +214,11 @@ winAf[gcPerc > 0.6,]
 rngs[gcPerc > 0.6]
 @
 
+When looking at the sequence of the chromosome, you have probably noticed that the start and end of the chromosome is purely N bases. This is referred to as \textit{Masked} sequence. To find particular sequences or motifs in DNA we can use the \Rcode{matchPattern} function.
+
 \subsection{Finding sequences}
 
-
+The basic usage of \Rcode{matchPattern} is to take a basic character string, and to report whereabout it occurs in another string. For instance, the following example will locate the start codon (ATG) in a defined sequence
 
 <<>>=
 s1 <- "aaaatgcagtaacccatgccc"
@@ -146,127 +227,43 @@ matchPattern("atg", s1)
 
 Masked regions on the genome can be identified by long stretches of N bases
 
-\usecase Use the \Rfunction{matchPattern} function to find potential start sites in Chromosome 22
+\usecase Use the \Rfunction{matchPattern} function to find all occurrences of 10 consecutive Ns. Create a \Rcode{GRanges} representation of the result.
 
 <<>>=
 n.matches <- matchPattern("NNNNNNNNNN", hg19[["chr22"]])
-maskRegions <- IRanges(start=start(n.matches),end=end(n.matches))
+n.matches
+maskRegions <- GRanges("chr22",
+                       IRanges(start=start(n.matches),end=end(n.matches))
+)
 @
 
-\usecase create a set of non-overlapping intervals using \Rfunction{reduce}
+You'll notice that the ranges object we create contains overlapping intervals. For analysis purposes though, we probably want non-overlapping intervals.
+
+\usecase Create a set of non-overlapping masked regions using \Rfunction{reduce}
 <<>>=
 maskRegions <- reduce(maskRegions)
 @
 
-\subsection{Working with Gene sequences}
+If we want the places on the chromosome that are \textbf{not} masked, this is easily achieved with functions in IRanges.
 
-We are given a text file containing the positions of genes on chromosome 22. Our task is to read this file, produce a Genomic Ranges representation of the data and start to explore the sequences of the genes.
-
-<<>>=
-chr22Info <- read.delim("hg19.chr22Genes.txt")
-head(chr22Info)
-@
-
-Creating a GRanges object
-
-<<>>=
-chr22Rng <- GRanges(chr22Info[,4], IRanges(chr22Info[,3], chr22Info[,5]))
-@
-
-However, we might want to keep track of the name of each gene. We can do this be using extra arguments
-<<>>=
-chr22Rng <- GRanges(xInfo[,4], IRanges(xInfo[,3], xInfo[,5]),
-                    GeneSymbol=xInfo[,2],EntrezID=xInfo[,1])
-@
-
-The extra information forms part of the element metadata. To see what metadata we have stored currently, we can use the mcols function. The actual variables can be accessed using the \$ operator with the name of the variable.
-
-\usecase See what metadata is stored with the ranges object. Print out the gene symbols
+\usecase Create a GRanges object to represent all un-masked regions. Try using the \Rcode{gaps} or \Rcode{setdiff} functions.
 
 
 <<>>=
-mcols(chr22Rng)
-chr22Rng$GeneSymbol
+unmaskRegions <- gaps(maskRegions)
+unmaskRegions
+wholechr <- GRanges("chr22",IRanges(1,chrLen["chr22"]))
+setdiff(wholechr,maskRegions)
 @
 
 
-\usecase Find the ID of the longest and shortest exon
-
-<<>>=
-id.of.longest <- which.max(width(chr22Rng))
-chr22Rng[id.of.longest]
-id.of.shortest <- which.min(width(chr22Rng))
-chr22Rng[id.of.shortest]
-@
-
-Genes can have multiple entries, depending on how many different transcripts are defined for them.
-
-\usecase Which gene has the most number of transcrips
-<<>>=
-sort(table(chr22Rng$EntrezID))
-most.transcripts <- names(sort(table(chr22Rng$EntrezID),decreasing=TRUE))[1]
-chr22Rng[which(chr22Rng$EntrezID  == most.transcripts)]
-@
-
-
-Lets' find out how many genes can be found in the windows we defined earlier
-
-<<>>=
-chr22Rng <- sort(chr22Rng)
-@
-
-\usecase Can you explain the warning message in the following?
-
-<<>>=
-findOverlaps(rngs, chr22Rng)
-@
-
-<<>>=
-chr22Rng <- renameSeqlevels(chr22Rng, value=c("22"="chr22"))
-findOverlaps(rngs, chr22Rng)
-@
-
-<<>>=
-nOverlaps <- countOverlaps(rngs,chr22Rng)
-deserts <- rngs[which(nOverlaps==0)]
-deserts
-@
-
-<<>>=
-which.max(nOverlaps)
-mostGenes <- rngs[which.max(nOverlaps)]
-mostGenes
-chr22Rng[chr22Rng %over% mostGenes]
-@
-
-\subsection{Retrieving the sequence for a gene}
-
-We can of course retrieve the full sequence for a gene
-
-<<>>=
-chr22seqs <- getSeq(hg19, chr22Rng)
-chr22seqs
-@
-
-However, there are options available for when we don't want the full sequence, or want to obtain sequences beyond that defined by the gene.
-
-Get flanking sequences.....
-
-<<>>=
-chr22Flanks <- flank(chr22Rng,100)
-chr22FlankSeq <- getSeq(hg19,chr22Flanks)
-@
-
-<<>>=
-resize(chr22Rng, 50)
-getSeq(hg19,resize(chr22Rng, 50))
-@
 
 \section{Reading bam alignments}
-An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicRanges} package for simplicity. In your own time, feel free to check out the \Rfunction{scanBam} function in \Biocpkg{Rsamtools}. 
+An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicAlignments} package for simplicity. 
 
-An example bam file is provided in the {\tt exampleData} folder.
+An example bam file is provided in the {\tt exampleData} folder. If you wish, it may help your comprehension to also view this file in \textbf{IGV}.
 
+\subsection{Exploring and filtering the reads}
 
 \usecase
 Read the example bam file into R as a \Robject{GRanges} object. How many reads are in the file?
@@ -279,119 +276,208 @@ bam <- readGAlignments(file=mybam)
 bam
 @
 
-The essential information from the bam file has been imported. Finer grain control over what data are read can be achieved by using the {\tt param} argument. The object returned by \Rfunction{readGAlignments} acts like a data frame, with columns that can be assessed by a number of convenience functions \Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}
+\bioccomment{In IGV, try jumping to the region where the first few reads in this bam file are aligned. Hopefully, IGV should display the same information about the reads that we see in R!}
 
-\usecase
-Use accessor ({\Rfunction{strand}, \Rfunction{width}, \Rfunction{cigar}, \Rfunction{start}, \Rfunction{end}) functions to explore the \Robject{bam} object.
 
+Sometimes, we might want more than the standard fields from the bam file. In the following examples, we are also going to work with the mapping qualities and flags. We can also choose to use the names of each read as row identifers.
+
+\usecase Read the bam file again, this time importing the sequence reads, mapping qualities and flags. Also, import the read names. See how the resulting object differs from before.
 
 <<>>=
-table(strand(bam))
-table(width(bam))
-range(start(bam))
-head(sort(table(cigar(bam)), decreasing=TRUE))
+bam <- readGAlignments(file=mybam, 
+                       param=ScanBamParam(what=c("seq","mapq","flag")),
+                       use.names = TRUE)
+bam
 @
 
-<<>>=
-bam <- readGAlignments(file=mybam, param=ScanBamParam(what=c("seq","mapq","flag")))
-@
+The extra information that we have read in is part of the \textit{'element metadata'} for the object. This metadata can be accessed using the \Rcode{mcols} function, the result being a data-frame-like structure. As with standard data frames, particular columns can be extracted using the \Rcode{\$} operator
 
-Mapping qualities......
+\usecase Find out what metadata is stored in the bam object. By referring to the columns of the metadata object, extract the mapping qualities and produce a histogram of these values.
+
 
 <<>>=
+mcols(bam)
 hist(mcols(bam)$mapq)
-bam[mcols(bam)$mapq==0]
 @
 
+The mapping qualities reflect how unique and reliable a particular mapping to the genome is, and these values are produced by the particular aligner. If we want only reliable reads in our analysis, we can choose to keep only reads whose mapping quality exceeds a particular threshold.
 
-Cigar.....
+\usecase Produced a filtered object with only reads that have mapping quality greater than 30.
 
 <<>>=
-bestReads <- bam[cigar(bam) == "68M"]
-bestRngs <- GRanges("chr22", ranges(bestReads))
-gSeqs <- getSeq(hg19, bestRngs)
-alignedSeqs <- mcols(bestReads)$seq
-gSeqs[1:5]
-alignedSeqs[1:5]
-sum(alignedSeqs == gSeqs)
+bamFilt <- bam[mcols(bam)$mapq > 30]
+@
+
+The 'flag' field is also a useful indicator of read quality. 
+
+\usecase Refer to the webpage that explains bam file flags, and identify reads that have been flagged as PCR duplicates. Create an object containing only reads that are PCR duplicates, and further modify the filtered object from the previous exercise to exclude PCR duplicates.
+
+<<>>=
+table(mcols(bamFilt)$flag) 
+dupReads <- bamFilt[mcols(bamFilt)$flag==1024]
+bamFilt <-bamFilt[mcols(bamFilt)$flag != 1024]
+@
+
+\bioccomment{We can in fact remove PCR duplicates when we read the bam file. Try the following section of code and verify that this object contains none of the PCR duplicate reads that you identified in the previous exercise}
+
+<<>>=
+bam.nodups <- readGAlignments(file=mybam, 
+            param=ScanBamParam(flag=scanBamFlag(isDuplicate=FALSE)),
+            use.names=TRUE)
+names(dupReads) %in% bam.nodups
+@
+
+\bioccomment{Dodgy reads may also be discovered by looking at the base frequency, or first few bases. Explore these data if you have time.}
+
+<<>>=
+alignedSeqs <- mcols(bamFilt)$seq
+seqFreq <- alphabetFrequency(alignedSeqs,baseOnly=TRUE)
+subseq(alignedSeqs,1,10)
+sort(table(subseq(alignedSeqs,1,10)),decreasing=TRUE)[1:5]
 @
 
 
-Several range operations will work on the GappedAlignment object, such as \Rfunction{coverage}.
+\subsection{Finding 'peaks' in the aligned data}
 
+Several range operations will work on the \Rcode{GappedAlignment} object, such as \Rfunction{coverage}.
 
 \usecase
-Create a coverage vector and identify regions with more than 1000 reads covering
-
+Create a coverage vector using \Rcode{coverage} and see the output it produces. How can we get the coverage for chromosome 22 only? Why are there so many items in the output? \bioccomment{Try using the \Rcode{seqlevels} function on your aligned reads object}
 
 <<>>=
-cov <- coverage(bam)
-HighCov <- ranges(slice(cov, 1000))[["22"]]
+cov <- coverage(bamFilt)
+cov
+names(cov)
+cov[["22"]]
+seqlevels(bamFilt)
+@
+
+The \Rcode{slice} function, as it's name suggest, will return positions where the coverage exceeds a certain value.
+
+\usecase Identify regions with more than 400 reads covering and convert to an IRanges object.
+<<>>=
+slice(cov[["22"]],400)
+HighCov <- ranges(slice(cov[["22"]], 400))
 HighCov
 @
 
+For analysis, we might want to check that all the regions are the same length. We can do this using the \Rcode{resize} function.
 
-
-An efficient way of creating a subset of reads based on genomic location is to use the overlapping functionality that we saw previously.
-
-\usecase
-Restrict the alignments to just those in the high-coverage (say > 1000 reads) regions
-
+\usecase Resize all the regions to a length of 100. Make sure that you have non-overlapping regions using \Rcode{reduce}
 
 <<>>=
-HighCovGR <- GRanges("22", IRanges(start = start(HighCov), end=end(HighCov)))
-bam.sub <- bam[bam %over% HighCovGR,]
+HighCov <- resize(HighCov,100)
+HighCov <- reduce(HighCov)
+@
+
+Now we are ready to find the reads that map within these peaks.  An efficient way of creating a subset of reads based on genomic location is to use the overlapping functionality implemented in \Biocpkg{GenomicAlignments}. The \Rcode{findOverlaps} function will give indices for all ranges in the \textit{query} and \textit{subject} objects that overlap, which we can use to subset the objects. Alternatively ,the shortcut \Rcode{\%over\%} is often useful.
+
+\usecase Restrict the alignments to just those in the high-coverage peaks. First, we will need to convert our peak regions to a GRanges object. How many reads are there inside these peaks in total?
+
+<<>>=
+HighCovGR <- GRanges("22", HighCov)
+names(HighCovGR) <- paste("Region", 1:length(HighCov),sep="")
+bam.sub <- bamFilt[bamFilt %over% HighCovGR]
 bam.sub
 length(bam.sub)
-
 @
 
+If we just wanted the number of overlapping reads, and not their details, we can use \Rcode{countOverlaps}. The order is of arguments is important when we use this function.
 
-\usecase
-Use \Rfunction{findOverlaps} and \Rfunction{countOverlaps} to find out how many reads align to these high-coverage regions.
+\usecase Use the \Rfunction{countOverlaps} to find out how many reads align to these high-coverage regions.
 
 <<>>=
-findOverlaps(HighCovGR,bam)
-countOverlaps(HighCovGR,bam)
+countOverlaps(HighCovGR,bamFilt)
+sum(countOverlaps(HighCovGR,bamFilt))
 @
 
+\bioccomment{Why is \Rcode{countOverlaps(bamFilt, HighCovGR)} not very informative in this example?}
 
 \subsection{Reading a particular genomic region}
 
-If we were only really interested in a relatively small region of a chromosome, then another option would be to read the whole bam file, especially if the file can run to several gigabytes in size. As the bam file is indexed, we can easily jump to the location we are interested in. This is achieved by using the \Rfunction{ScanBamParam} function with the GRanges object for the region we want to read. See the help page on \Rfunction{ScanBamParam} for more details about how to customise how to read a bam file.
-
-
-
+If we were only really interested in a relatively small region of a chromosome, it is rather inefficient to read the whole bam file and then subset to the region we are interested in: especially if the file can run to several gigabytes in size. Fortunately, as the bam file is indexed, we can easily jump to the location we are interested in. This is achieved by using the \Rfunction{ScanBamParam} function with a GRanges object for the region we want to read. 
 
 \usecase
 Read a portion of the bam file corresponding to the high-coverage regions rather the whole file. Verify that the same reads as the previous exercise are returned.
 
+\bioccomment{You will need to carry out the same filtering on the file that you read-in. i.e. mapping quality over 30 and exclude PCR duplicates}
 
 <<>>=
 bam.sub2 <- readGAlignments(file=mybam,use.names=TRUE, 
-param=ScanBamParam(which=HighCovGR))
+param=ScanBamParam(which=HighCovGR,what=c("seq","mapq","flag")))
+bam.sub2 <- bam.sub2[mcols(bam.sub2)$mapq >30 & mcols(bam.sub2)$flag != 1024]
+
 length(bam.sub)
 length(bam.sub2)
-all(names(bam.sub) == names(bam.sub2))
+all(names(bam.sub)==names(bam.sub2))
 @
 
-The previous two exercises have restricted the analysis to reads that fall inside any of the high-coverage regions. However, we might want to look at each region separately.
 
 
-\usecase
-Classify the reads according to which high-coverage region they belong to. Verify that the correct number of overlapping reads are returned.
 
+\section{Supplementary}
+\subsection{Calculating Genome length}
+
+In this section, we will work through an example of how to calculate the length of the human genome, and express each chromosome as a percentage of the total length. 
+
+You will see that the code to calculate the length of a particular chromosome is virtually identical, apart from the variable name inside the \Rcode{[[]]}. 
 
 <<>>=
-names(HighCovGR) <- paste("Region", 1:length(HighCov),sep="")
-regionLst <- split(HighCovGR, names(HighCovGR))
-
-splitRegions <- lapply(regionLst, function(x) bam[bam %over% x])
-
-lapply(splitRegions,length)
-
+length(hg19[["chr22"]])
+length(hg19[["chr21"]])
+length(hg19[["chr20"]])
+length(hg19[["chr19"]])
+#etc.....
 @
 
+To save ourselves typing, and prevent errors, we often encapsulate tasks like this with a \textit{for loop}. If you are unfamiliar with for loops, see the Appendix for a more-detailed discussion.
+
+\usecase What is the length of each chromosome? Calculate this using a for loop. You will need to 'loop' over the chromosome names and create a temporary variable to store the chromosome lengths as you calculate them.
+
+<<>>=
+chrLen <- NULL
+cnames <- seqnames(hg19)
+
+for(i in 1:length(cnames)){
+  currentChr <- cnames[i]
+  print(currentChr)
+  chrLen[i] <- length(hg19[[currentChr]])
+}
+chrLen
+names(chrLen) <- seqnames(hg19)
+@
+
+\bioccomment{R is very efficient at dealing with vectors, so in a lot of cases a for loop is not required. Often, we use a function that is part of the \Rcode{apply} family. This allows us to perform the same operation in fewer lines of code. An equivalent lapply statement to the above for loop is as follows:}
+
+<<>>=
+chrLen <- lapply(seqnames(hg19), function(x) length(hg19[[x]]))
+chrLen
+names(chrLen) <- seqnames(hg19)
+@
+
+To tidy-up a bit, we can discard unassembled, or alternate chromosomes. One way would be to only include chromosomes over a certain length.
+
+\usecase Select chromosomes that are over 5 million bases in length
+
+<<>>=
+chrLen <- chrLen[chrLen>5000000]
+@
+
+\usecase Calculate the total length of the genome
+
+<<>>=
+totalLength <- sum(as.numeric(chrLen))
+@
+
+\usecase Express each genome as a percentage of the total length. Visualise using a barplot.
+
+<<>>=
+barplot(100*(chrLen / totalLength))
+@
+We could also visualise the length as a cumulative distribution
+<<>>=
+barplot(cumsum(100*(chrLen / totalLength)))
+@
 
 
 \end{document}
