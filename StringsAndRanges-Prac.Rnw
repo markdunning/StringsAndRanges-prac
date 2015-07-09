@@ -110,7 +110,7 @@ mylen
 
 \subsection{Alphabet Frequencies}
 
-The \Rcode{alphabetFrequency} is a very useful and efficient tool provided by \Biocpkg{Biostrings} for calculating the number of occurences of each DNA base within a given \Rcode{DNAString}. In fact, it can operate on any alphabet. To tell the function to use only valid DNA bases, we can use the \Rcode{baseOnly=TRUE} argument. \bioccomment{As usual, we can see the help page for the function for more information about the arguments}
+The \Rcode{alphabetFrequency} function is a very useful and efficient tool provided by \Biocpkg{Biostrings} for calculating the number of occurences of each DNA base within a given \Rcode{DNAString}. In fact, it can operate on any alphabet. To tell the function to use only valid DNA bases, we can use the \Rcode{baseOnly=TRUE} argument. \bioccomment{As usual, we can see the help page for the function for more information about the arguments}
 
 \usecase Find the overall number of A, C, T and Gs in the sequence for Chromosome 22. Express these as a proportion of the total length of the chromosome.
 
@@ -271,7 +271,7 @@ Read the example bam file into R as a \Robject{GRanges} object. How many reads a
 
 <<>>=
 library(GenomicAlignments)
-mybam <- "exampleData/NA19914.chr22.bam"
+mybam <- "exampleData/HG00096.chr22.bam"
 bam <- readGAlignments(file=mybam)
 bam
 @
