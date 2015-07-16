@@ -45,7 +45,6 @@ BiocStyle::latex()
 
 The purpose of this practical is to familiarise you with the concept of strings and ranges in Bioconductor. These are fundamental objects upon which many analysis tools for next-generation sequencing data are built-upon.
 
-\textbf{In order for the example code to run, you must be in the {\tt Practicals} directory.}
 
 <<options, results="hide", echo=FALSE>>=
 options(digits=3, width=80, prompt=" ", continue=" ")
@@ -261,7 +260,7 @@ setdiff(wholechr,maskRegions)
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicAlignments} package for simplicity. 
 
-An example bam file is provided in the {\tt exampleData} folder. If you wish, it may help your comprehension to also view this file in \textbf{IGV}.
+An example bam file is provided in the {\tt Day2} folder. If you wish, it may help your comprehension to also view this file in \textbf{IGV}.
 
 \subsection{Exploring and filtering the reads}
 
@@ -271,7 +270,7 @@ Read the example bam file into R as a \Robject{GRanges} object. How many reads a
 
 <<>>=
 library(GenomicAlignments)
-mybam <- "exampleData/HG00096.chr22.bam"
+mybam <- "Day2/HG00096.chr22.bam"
 bam <- readGAlignments(file=mybam)
 bam
 @
