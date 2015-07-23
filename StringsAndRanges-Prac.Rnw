@@ -117,7 +117,7 @@ The \Rcode{alphabetFrequency} function is a very useful and efficient tool provi
 
 <<>>=
 alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE)
-alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE) / myLen
+alphabetFrequency(hg19[["chr22"]],baseOnly=TRUE) / mylen
 @
 
 We would hope that the proportion of each base will be roughly the same along the entire chromosome. However, there may be local variations that we could explore. To do this, we need a strategy for dividing the chromsome into equal-sized windows. Lets choose a window size of 1000 bases. 
@@ -127,7 +127,7 @@ The best way to construct the windows is to use a \Rcode{GRanges} object. To mak
 \usecase Create a vector of start positions that can be used to divide up Chromosome 22 into 1000 base pair intervals. You will need to make sure that the last start position is 1000 less than the length of the chromosome. 
 
 <<>>=
-startpos <- seq(1,myLen-1000,1000)
+startpos <- seq(1,mylen-1000,1000)
 @
 
 \usecase Now calculate what the end position of each interval needs to be and create the \Rcode{IRanges} object.
@@ -251,7 +251,7 @@ If we want the places on the chromosome that are \textbf{not} masked, this is ea
 <<>>=
 unmaskRegions <- gaps(maskRegions)
 unmaskRegions
-wholechr <- GRanges("chr22",IRanges(1,chrLen["chr22"]))
+wholechr <- GRanges("chr22",IRanges(1,mylen))
 setdiff(wholechr,maskRegions)
 @
 
@@ -323,7 +323,7 @@ bamFilt <-bamFilt[mcols(bamFilt)$flag != 1024]
 bam.nodups <- readGAlignments(file=mybam, 
             param=ScanBamParam(flag=scanBamFlag(isDuplicate=FALSE)),
             use.names=TRUE)
-names(dupReads) %in% bam.nodups
+names(dupReads) %in% names(bam.nodups)
 @
 
 \bioccomment{Dodgy reads may also be discovered by looking at the base frequency, or first few bases. Explore these data if you have time.}
