@@ -295,25 +295,28 @@ mcols(bam)
 hist(mcols(bam)$mapq)
 @
 
-The mapping qualities reflect how unique and reliable a particular mapping to the genome is, and these values are produced by the particular aligner. If we want only reliable reads in our analysis, we can choose to keep only reads whose mapping quality exceeds a particular threshold.
-
-\usecase Produced a filtered object with only reads that have mapping quality greater than 30.
-
-<<>>=
-bamFilt <- bam[mcols(bam)$mapq > 30]
-@
 
 The 'flag' field is also a useful indicator of read quality and the meaning of these flags is explained at this useful website
 
 {\tt https://broadinstitute.github.io/picard/explain-flags.html}
 
-\usecase Refer to the webpage that explains bam file flags  and identify reads that have been flagged as PCR duplicates. Create an object containing only reads that are PCR duplicates, and further modify the filtered object from the previous exercise to exclude PCR duplicates.
+\usecase Refer to the webpage that explains bam file flags  and identify reads that have been flagged as PCR duplicates. Create an object containing only reads that are PCR duplicates, and further modify the bam object from the previous exercise to exclude PCR duplicates.
 
 <<>>=
-table(mcols(bamFilt)$flag) 
-dupReads <- bamFilt[mcols(bamFilt)$flag==1024]
-bamFilt <-bamFilt[mcols(bamFilt)$flag != 1024]
+table(mcols(bam)$flag) 
+dupReads <- bam[mcols(bam)$flag==1024]
+bamFilt <-bam[mcols(bam)$flag != 1024]
 @
+
+
+The mapping qualities reflect how unique and reliable a particular mapping to the genome is, and these values are produced by the particular aligner. If we want only reliable reads in our analysis, we can choose to keep only reads whose mapping quality exceeds a particular threshold.
+
+\usecase Produced a filtered object with only reads that have mapping quality greater than 30.
+
+<<>>=
+bamFilt <- bam[mcols(bamFilt)$mapq > 30]
+@
+
 
 \bioccomment{We can in fact remove PCR duplicates when we read the bam file. Try the following section of code and verify that this object contains none of the PCR duplicate reads that you identified in the previous exercise}
 
@@ -475,6 +478,8 @@ We could also visualise the length as a cumulative distribution
 <<>>=
 barplot(cumsum(100*(chrLen / totalLength)))
 @
+
+
 
 
 \end{document}
