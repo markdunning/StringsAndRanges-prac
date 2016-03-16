@@ -256,7 +256,7 @@ setdiff(wholechr,maskRegions)
 \section{Reading bam alignments}
 An obvious application of the \Rclass{IRanges} and \Rclass{GRanges} infrastructure is to facilitate the storage and querying of genomic alignments. The \Biocpkg{Rsamtools} is one such package that allows aligned reads to be imported into R. However, we will use functionality from the \Biocpkg{GenomicAlignments} package for simplicity. 
 
-An example bam file is provided in the {\tt Day1} folder. If you wish, it may help your comprehension to also view this file in \textbf{IGV}.
+An example bam file is provided in the {\tt Day2} folder. If you wish, it may help your comprehension to also view this file in \textbf{IGV}.
 
 \subsection{Exploring and filtering the reads}
 
@@ -266,7 +266,7 @@ Read the example bam file into R as a \Robject{GRanges} object. How many reads a
 
 <<>>=
 library(GenomicAlignments)
-mybam <- "Day1/HG00096.chr22.bam"
+mybam <- "Day2/HG00096.chr22.bam"
 bam <- readGAlignments(file=mybam)
 bam
 @
@@ -308,13 +308,29 @@ dupReads <- bam[mcols(bam)$flag==1024]
 bamFilt <-bam[mcols(bam)$flag != 1024]
 @
 
+\bioccomment{In reality, this code is not sufficient to find all PCR duplicates, as it does not account for reads that have other flags set as well as the PCR duplicate flag. The code to remove all PCR duplicates would be more complex. Essentially we have to remove all flags in the range 1024 to 2048, and any flags over 3072}
+
+<<>>=
+## Thanks to Tam Freestone-Bayes for the tip
+
+ flag <- mcols(bam)$flag;
+   a <- intersect(
+     which(flag >= 1024),
+     which(flag < 2048)
+   )
+   b <- which(flag >= 3072)
+   dupIndices <- union(a, b)
+   
+   bamFilt2 <- bam[-dupIndices]
+@
+
 
 The mapping qualities reflect how unique and reliable a particular mapping to the genome is, and these values are produced by the particular aligner. If we want only reliable reads in our analysis, we can choose to keep only reads whose mapping quality exceeds a particular threshold.
 
 \usecase Produced a filtered object with only reads that have mapping quality greater than 30.
 
 <<>>=
-bamFilt <- bam[mcols(bamFilt)$mapq > 30]
+bamFilt <- bamFilt[mcols(bamFilt)$mapq > 30]
 @
 
 
