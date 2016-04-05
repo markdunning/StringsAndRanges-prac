@@ -77,7 +77,6 @@ The names of each chromosome can be found by using the \Rcode{names} function. O
 \usecase How many chromosomes does the package have sequences for?
 
 <<>>=
-names(hg19)
 seqnames(hg19)
 length(seqnames(hg19))
 @
@@ -322,6 +321,16 @@ bamFilt <-bam[mcols(bam)$flag != 1024]
    dupIndices <- union(a, b)
    
    bamFilt2 <- bam[-dupIndices]
+@
+
+An alternative is provided by the \Biocpkg{Rsamtools} package. There is a useful utility function \Rfunction{bamFlagAsBitMatrix} that can convert a vector of flags into a matrix where each column is a different flag that can be set. Each row of the matrix tells us which flags have been set for a particular read. Thus, we can read down the relevant column to identify the PCR duplicates.
+
+<<>>=
+flags <- mcols(bam)$flag
+flagMat <- bamFlagAsBitMatrix(flags)
+head(flagMat)
+table(flagMat[,11])
+bamFilt2 <- bam[-which(flagMat[,"isDuplicate"]==1)]
 @
 
 
